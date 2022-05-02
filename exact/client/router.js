@@ -4,12 +4,14 @@ import { checkMatchedStr } from "./utils.js";
 const Routes = new Set();
 
 const DismatchedComment = new Text("");
-export function renderRoute(obj, children) {
+export function renderRoute(obj, $children) {
   let fallback = DismatchedComment,
     el = null,
     current;
 
   const scripts = Components.context.scripts,
+    component = scripts[obj.component],
+    children = $children.map(handleSingleNode),
     props = function () {
       return obj;
     },
@@ -17,31 +19,48 @@ export function renderRoute(obj, children) {
     key = isExact ? "exact:paths" : "paths",
     paths = typeof obj[key] === "number" ? scripts[obj[key]].current : obj[key];
 
-  obj.component = scripts[obj.component].current;
+  if (component === undefined) {
+    fallback = Array(children.length).fill(DismatchedComment);
 
-  children.length > 0 &&
-    (obj.Children = {
-      "#isComponent": false,
-      "#isChild": true,
-      dom: children.map(handleSingleNode),
+    Routes.add(function () {
+      if (checkMatchedStr(paths, isExact)) {
+        if (current === children) return;
+        current.forEach(($, ind) => $.replaceWith(children[ind]));
+        current = children;
+      } else {
+        if (current === fallback) return;
+        current.forEach(($, ind) => $.replaceWith(fallback[ind]));
+        current = fallback;
+      }
     });
 
-  checkMatchedStr(paths, isExact) && (el = render(obj.component, props));
+    current = checkMatchedStr(paths, isExact) ? children : fallback;
+  } else {
+    children.length > 0 &&
+      (obj.Children = {
+        "#isComponent": false,
+        "#isChild": true,
+        dom: children,
+      });
 
-  Routes.add(function () {
-    if (checkMatchedStr(paths, isExact)) {
-      if (current === el) return;
-      el === null && (el = render(obj.component, props));
-      current.replaceWith(el);
-      current = el;
-    } else {
-      if (current === fallback) return;
-      current.replaceWith(fallback);
-      current = fallback;
-    }
-  });
+    obj.component = component.current;
+    checkMatchedStr(paths, isExact) && (el = render(obj.component, props));
 
-  current = el || fallback;
+    Routes.add(function () {
+      if (checkMatchedStr(paths, isExact)) {
+        if (current === el) return;
+        el === null && (el = render(obj.component, props));
+        current.replaceWith(el);
+        current = el;
+      } else {
+        if (current === fallback) return;
+        current.replaceWith(fallback);
+        current = fallback;
+      }
+    });
+
+    current = el || fallback;
+  }
 
   return current;
 }
@@ -80,7 +99,12 @@ export function renderLink(obj, children) {
     Routes.forEach(($) => $());
   });
 
-  children.map(handleSingleNode).forEach(($) => el.appendChild($));
+  children.map(handleSingleNode).forEach(function reCall(node) {
+    if (node instanceof Array) return node.forEach(reCall);
+    return el.appendChild(node);
+  });
 
   return el;
 }
+
+export function renderSwitch(obj, children) {}

@@ -1,5 +1,5 @@
 import { Hooks } from "./hooks.js";
-import { renderLink, renderRoute } from "./router.js";
+import { renderLink, renderRoute, renderSwitch } from "./router.js";
 import {
   scriptify,
   encodeHTML,
@@ -252,6 +252,8 @@ function renderDOM([tag, props, children]) {
     );
   } else if (checkIfCustomTag(tag)) {
     switch (tag) {
+      case "Switch":
+        return renderSwitch(props, children);
       case "Route":
         return renderRoute(props, children);
       case "Link":

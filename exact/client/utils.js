@@ -1,8 +1,8 @@
 export const checkMatchedStr = function (str, isExact) {
+    str = str || document.location.pathname;
     if (str instanceof Array) return str.some(checkMatchedStr);
     const currentLocation = document.location.pathname,
       regExp = isExact ? "^" + str + "$" : "^" + str;
-
     return new RegExp(regExp).test(currentLocation);
   },
   scriptify = function (val) {
