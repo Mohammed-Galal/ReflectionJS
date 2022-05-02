@@ -28,24 +28,25 @@ export var Components = {
   updating: false,
   context: null,
 };
-var availDataTypes = ["string", "number", "boolean", "symbol", "function"],
+
+const availDataTypes = ["string", "number", "boolean", "symbol", "function"],
   cachedDomByKeys = new Map();
 
-export default function (root, target) {
+export default function (root, el) {
   if (typeof root === "function")
     throw "the root Component must not be a function";
   if (!root["#isComponent"]) return "the root element is not a JSX Component";
 
-  const result = render(root);
-  if (result instanceof Array)
-    return result.forEach(function (n) {
-      return target.appendChild(n);
-    });
-  return target.appendChild(result);
+  const result = render(root),
+    target = el();
+
+  result instanceof Array
+    ? result.forEach((e) => target.appendChild(e))
+    : target.appendChild(result);
 }
 
 function render(fn, props, proxify) {
-  var hooksContext = {
+  let hooksContext = {
     useBatch: new Set(),
     useWithdraw: null,
     useState: {
@@ -228,7 +229,7 @@ function renderDOM([tag, props, children]) {
     });
 
     var Keys = Object.keys(dynamicProps);
-    const result = render(
+    return render(
       components[tag],
       function () {
         Keys.forEach(function (prop) {
@@ -242,10 +243,15 @@ function renderDOM([tag, props, children]) {
         });
       }
     );
-    return result;
-  } else if (checkIfCustomTag(tag))
-    // we should return Array Of Nodes
-    return children.map(handleSingleNode);
+  } else if (checkIfCustomTag(tag)) {
+    switch (tag) {
+      case "Route":
+        return renderRoute(props, children);
+      default:
+        // we should return Array Of Nodes
+        return children.map(handleSingleNode);
+    }
+  }
 
   const el = document.createElement(tag);
 
@@ -293,8 +299,8 @@ function handleSingleNode(node) {
         return _typeof(D) !== val;
       });
 
-    // if (isNotPremitive && val instanceof Array && val[0]["#isComponent"])
-    //   return val.deps.push(renderLoop(val.current));
+    if (isNotPremitive && val instanceof Array && val[0]["#isComponent"])
+      return val.deps.push(renderLoop(val.current));
 
     var TXT = new Text(""),
       reseter = function reseter() {
@@ -309,6 +315,7 @@ function handleSingleNode(node) {
   return renderDOM(node);
 }
 
+// !===================================
 function renderLoop(arr, container) {
   var map = arr.map(function (component) {
     return render(component);
@@ -328,15 +335,8 @@ function renderLoop(arr, container) {
     });
   };
 }
-// !===================================
-function encodeHTML(node) {
-  return String(node).replace(/&#60;|&#62;/, function (m) {
-    return m === "&#60;" ? "<" : ">";
-  });
-}
 
-// !===================================
-const DismatchedComment = new Comment("route dismathced");
+const DismatchedComment = new Text("");
 function renderRoute(obj, children) {
   let el = DismatchedComment;
 
@@ -351,7 +351,7 @@ function renderRoute(obj, children) {
     (obj.Children = {
       "#isComponent": false,
       "#isChild": true,
-      dom: renderDOM(children[0], false, parent),
+      dom: children.map(handleSingleNode),
     });
 
   const props = function () {
@@ -369,14 +369,21 @@ function renderRoute(obj, children) {
   return el;
 }
 
+/** @function UTILS ***********************************/
+
 function checkMatchedStr(str, isExact) {
+  /**
+   * @function checkMatchedStr
+   * @param {URL} str
+   * @param {Bool} isExact
+   * @returns true: if the current window Location matches the URL specified
+   */
+
   const currentLocation = document.location.pathname;
 
   if (isExact) return new RegExp("^" + str + "$").test(currentLocation);
   return new RegExp("^" + str).test(currentLocation);
 }
-
-// !=========================
 
 function scriptify(val) {
   return {
@@ -386,5 +393,11 @@ function scriptify(val) {
 }
 
 function checkIfCustomTag(tag) {
-  return /^(Route|Switch)$/.test(tag) || tag === "";
+  return /^(|Route|Switch|)$/.test(tag);
+}
+
+function encodeHTML(node) {
+  return String(node).replace(/&#60;|&#62;/, function (m) {
+    return m === "&#60;" ? "<" : ">";
+  });
 }

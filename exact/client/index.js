@@ -1,4 +1,11 @@
 import { Hooks } from "./hooks.js";
+import { renderRoute } from "./router.js";
+import {
+  scriptify,
+  encodeHTML,
+  checkIfCustomTag,
+  checkMatchedStr,
+} from "./utils.js";
 
 function _typeof(obj) {
   "@babel/helpers - typeof";
@@ -21,7 +28,7 @@ function _typeof(obj) {
 }
 
 export var Components = {
-  root: [document.getElementById("root")],
+  root: [],
   get currentParent() {
     return this.root[this.root.length - 1];
   },
@@ -45,8 +52,8 @@ export default function (root, el) {
     : target.appendChild(result);
 }
 
-function render(fn, props, proxify) {
-  var hooksContext = {
+export function render(fn, props, proxify) {
+  let hooksContext = {
     useBatch: new Set(),
     useWithdraw: null,
     useState: {
@@ -243,9 +250,15 @@ function renderDOM([tag, props, children]) {
         });
       }
     );
-  } else if (checkIfCustomTag(tag))
-    // we should return Array Of Nodes
-    return children.map(handleSingleNode);
+  } else if (checkIfCustomTag(tag)) {
+    switch (tag) {
+      case "Route":
+        return renderRoute(props, children);
+      default:
+        // we should return Array Of Nodes
+        return children.map(handleSingleNode);
+    }
+  }
 
   const el = document.createElement(tag);
 
@@ -282,7 +295,7 @@ function renderDOM([tag, props, children]) {
   return el;
 }
 
-function handleSingleNode(node) {
+export function handleSingleNode(node) {
   const scripts = Components.context.scripts,
     nodeType = _typeof(node);
 
@@ -293,8 +306,8 @@ function handleSingleNode(node) {
         return _typeof(D) !== val;
       });
 
-    // if (isNotPremitive && val instanceof Array && val[0]["#isComponent"])
-    //   return val.deps.push(renderLoop(val.current));
+    if (isNotPremitive && val instanceof Array && val[0]["#isComponent"])
+      return val.deps.push(renderLoop(val.current));
 
     var TXT = new Text(""),
       reseter = function reseter() {
@@ -305,8 +318,6 @@ function handleSingleNode(node) {
     scripts[node].deps.push(reseter);
     return TXT;
   }
-
-  // console.log(renderDOM(node), node);
 
   return renderDOM(node);
 }
@@ -329,64 +340,4 @@ function renderLoop(arr, container) {
       return container.appendChild(C);
     });
   };
-}
-// !===================================
-function encodeHTML(node) {
-  return String(node).replace(/&#60;|&#62;/, function (m) {
-    return m === "&#60;" ? "<" : ">";
-  });
-}
-
-// !===================================
-const DismatchedComment = new Comment("route dismathced");
-function renderRoute(obj, children) {
-  let el = DismatchedComment;
-
-  const scripts = Components.context.scripts,
-    isExact = "exact:paths" in obj,
-    key = isExact ? "exact:paths" : "paths",
-    paths = typeof obj[key] === "number" ? scripts[obj[key]].current : obj[key];
-
-  obj.component = scripts[obj.component].current;
-
-  children.length > 0 &&
-    (obj.Children = {
-      "#isComponent": false,
-      "#isChild": true,
-      dom: renderDOM(children[0], false, parent),
-    });
-
-  const props = function () {
-    return obj;
-  };
-
-  if (typeof paths === "string") {
-    checkMatchedStr(paths, isExact) && (el = render(obj.component, props));
-  } else if (paths instanceof Array) {
-    paths.some(function ($) {
-      return checkMatchedStr($, isExact);
-    }) && (el = render(obj.component, props));
-  }
-
-  return el;
-}
-
-function checkMatchedStr(str, isExact) {
-  const currentLocation = document.location.pathname;
-
-  if (isExact) return new RegExp("^" + str + "$").test(currentLocation);
-  return new RegExp("^" + str).test(currentLocation);
-}
-
-// !=========================
-
-function scriptify(val) {
-  return {
-    current: val,
-    deps: [],
-  };
-}
-
-function checkIfCustomTag(tag) {
-  return /^(Route|Switch)$/.test(tag) || tag === "";
 }

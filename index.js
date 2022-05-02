@@ -25,7 +25,7 @@ function App() {
     "#isComponent": true,
     _id: 1,
     scripts: [txt, () => setTxt(!txt)],
-    components: [Children],
+    components: [],
     dom: ["h1", { onClick: 1 }, [0]],
   };
 }
