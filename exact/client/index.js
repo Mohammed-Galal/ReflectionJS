@@ -28,10 +28,24 @@ export var Components = {
   updating: false,
   context: null,
 };
-var availDataTypes = ["string", "number", "boolean", "symbol", "function"],
+
+const availDataTypes = ["string", "number", "boolean", "symbol", "function"],
   cachedDomByKeys = new Map();
 
-export default function render(fn, props, proxify) {
+export default function (root, el) {
+  if (typeof root === "function")
+    throw "the root Component must not be a function";
+  if (!root["#isComponent"]) return "the root element is not a JSX Component";
+
+  const result = render(root),
+    target = el();
+
+  result instanceof Array
+    ? result.forEach((e) => target.appendChild(e))
+    : target.appendChild(result);
+}
+
+function render(fn, props, proxify) {
   var hooksContext = {
     useBatch: new Set(),
     useWithdraw: null,
@@ -76,8 +90,8 @@ export default function render(fn, props, proxify) {
         return {};
       };
 
-    component = function component(isUpdateing) {
-      Components.updating = isUpdateing;
+    component = function component(isUpdating) {
+      Components.updating = isUpdating;
       Hooks.reset(true, hooksContext, proxyFN);
       var C = fn(props());
       Hooks.reset(false);
@@ -89,11 +103,15 @@ export default function render(fn, props, proxify) {
   }
 
   var result = component(false);
-
-  if (result["#isComponent"] !== true) {
+  try {
+    if (result["#isComponent"] !== true) {
+      hooksContext = null;
+      if (result["#isChild"]) return result.dom;
+      throw fn + " must return JSX component";
+    }
+  } catch {
     hooksContext = null;
-    if (result["#isChild"]) return result.dom;
-    throw fn + " must return JSX component";
+    return;
   }
 
   var VALUE;
@@ -185,93 +203,112 @@ function handleComponent(_ref) {
   }
 }
 
-function renderDOM(_ref2) {
-  var tag = _ref2[0],
-    props = _ref2[1],
-    children = _ref2[2];
+function renderDOM([tag, props, children]) {
   var scripts = Components.context.scripts,
     components = Components.context.components,
     propsKeys = Object.keys(props);
 
-  if (typeof tag !== "number") {
-    var el;
-    if (checkIfCustomTag(tag)) el = Components.currentParent;
-    else el = document.createElement(tag);
+  if (typeof tag === "number") {
+    children.length > 0 &&
+      (props.Children = {
+        "#isComponent": false,
+        "#isChild": true,
+        dom: children.map(handleSingleNode),
+      });
 
-    const roots = Components.root;
-    roots.push(el);
+    var dynamicProps = {};
+    propsKeys.forEach(function (prop) {
+      var val = props[prop];
+      if (typeof val !== "number") return;
+      if (typeof scripts[val].current !== "function")
+        return (dynamicProps[prop] = val);
 
-    propsKeys.forEach(function ($) {
-      var attrName = $,
-        attrVal = props[$];
-      if (attrName === "key") return;
-      else if (typeof attrVal === "number") {
-        var reseter = function reseter() {
-          el[attrName] = scripts[attrVal].current;
-        };
-
-        if (/^on[A-Z]/.exec(attrName)) {
-          attrName = attrName.toLowerCase().slice(2);
-          return el.addEventListener(attrName, function () {
-            scripts[attrVal].current.apply(el, arguments);
-          });
-        } else if (attrName === "ref")
-          return (scripts[attrVal].current.current = el);
-
-        scripts[attrVal].deps.push(reseter);
-        return reseter();
-      }
-
-      switch (attrName) {
-        case "class":
-          el["className"] = attrVal;
-          break;
-        default:
-          el[attrName] = attrVal;
-      }
+      props[prop] = function () {
+        return scripts[val].current.apply(null, arguments);
+      };
     });
 
-    renderChildren(children, el);
+    var Keys = Object.keys(dynamicProps);
+    return render(
+      components[tag],
+      function () {
+        Keys.forEach(function (prop) {
+          props[prop] = scripts[dynamicProps[prop]].current;
+        });
+        return props;
+      },
+      function (PR) {
+        Keys.forEach(function ($) {
+          scripts[dynamicProps[$]].deps.push(PR);
+        });
+      }
+    );
+  } else if (checkIfCustomTag(tag))
+    // we should return Array Of Nodes
+    return children.map(handleSingleNode);
 
-    roots.length > 1 && roots.pop();
+  const el = document.createElement(tag);
 
-    return el;
-  }
+  propsKeys.forEach(function ($) {
+    var attrName = $,
+      attrVal = props[$];
+    if (attrName === "class") el["className"] = attrVal;
+    if (attrName === "key") return;
+    else if (typeof attrVal === "number") {
+      if (/^on[A-Z]/.exec(attrName)) {
+        attrName = attrName.toLowerCase().slice(2);
+        return el.addEventListener(attrName, function () {
+          scripts[attrVal].current.apply(el, arguments);
+        });
+      } else if (attrName === "ref")
+        return (scripts[attrVal].current.current = el);
 
-  children.length > 0 &&
-    (props.Children = {
-      "#isComponent": false,
-      "#isChild": true,
-      dom: renderDOM(children[0]),
-    });
+      function reseter() {
+        el[attrName] = scripts[attrVal].current;
+      }
 
-  var dynamicProps = {};
-  propsKeys.forEach(function (prop) {
-    var val = props[prop];
-    if (typeof val !== "number") return;
-    if (typeof scripts[val].current !== "function")
-      return (dynamicProps[prop] = val);
+      scripts[attrVal].deps.push(reseter);
+      return reseter();
+    }
 
-    props[prop] = function () {
-      return scripts[val].current.apply(null, arguments);
-    };
+    el[attrName] = attrVal;
   });
 
-  var Keys = Object.keys(dynamicProps);
-  return render(
-    components[tag],
-    function () {
-      Keys.forEach(function (prop) {
-        props[prop] = scripts[dynamicProps[prop]].current;
+  children.map(handleSingleNode).forEach(function reCall(node) {
+    if (node instanceof Array) return node.forEach(reCall);
+    return el.appendChild(node);
+  });
+
+  return el;
+}
+
+function handleSingleNode(node) {
+  const scripts = Components.context.scripts,
+    nodeType = _typeof(node);
+
+  if (nodeType === "string") return new Text(encodeHTML(node));
+  else if (nodeType === "number") {
+    var val = scripts[node],
+      isNotPremitive = availDataTypes.some(function (D) {
+        return _typeof(D) !== val;
       });
-      return props;
-    },
-    function (PR) {
-      Keys.forEach(function ($) {
-        scripts[dynamicProps[$]].deps.push(PR);
-      });
-    }
-  );
+
+    // if (isNotPremitive && val instanceof Array && val[0]["#isComponent"])
+    //   return val.deps.push(renderLoop(val.current));
+
+    var TXT = new Text(""),
+      reseter = function reseter() {
+        TXT.textContent = encodeHTML(val.current);
+      };
+
+    reseter();
+    scripts[node].deps.push(reseter);
+    return TXT;
+  }
+
+  // console.log(renderDOM(node), node);
+
+  return renderDOM(node);
 }
 
 function renderLoop(arr, container) {
@@ -300,49 +337,6 @@ function encodeHTML(node) {
   });
 }
 
-function renderChildren(children, parent) {
-  const scripts = Components.context.scripts;
-
-  children.forEach(function (node) {
-    const nodeType = _typeof(node);
-
-    if (nodeType === "string")
-      return parent.appendChild(new Text(encodeHTML(node)));
-    else if (nodeType === "number") {
-      var val = scripts[node],
-        isNotPremitive = availDataTypes.some(function (D) {
-          return _typeof(D) !== val;
-        });
-
-      if (isNotPremitive && val instanceof Array && val[0]["#isComponent"])
-        return val.deps.push(renderLoop(val.current, parent));
-
-      var TXT = new Text(""),
-        reseter = function reseter() {
-          TXT.textContent = encodeHTML(val.current);
-        };
-
-      reseter();
-      scripts[node].deps.push(reseter);
-      return parent.appendChild(TXT);
-    }
-
-    switch (node[0]) {
-      case "":
-        renderChildren(node[2], parent);
-        break;
-      case "Route":
-        renderRoute(node[1], node[2]);
-        break;
-      default:
-        try {
-          parent.appendChild(renderDOM(node));
-        } catch {
-          return;
-        }
-    }
-  });
-}
 // !===================================
 const DismatchedComment = new Comment("route dismathced");
 function renderRoute(obj, children) {

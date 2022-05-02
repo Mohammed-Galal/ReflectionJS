@@ -1,5 +1,4 @@
-// import { Components } from "./index.js";
-import { Components } from "./router.js";
+import { Components } from "./index.js";
 
 export const Hooks = {
   updateCurrentComponent: null,
