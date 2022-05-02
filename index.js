@@ -18,15 +18,15 @@ const listOfComponents = [
   },
 ];
 
-function App() {
+function App({ Children }) {
   const [txt, setTxt] = useState(true);
 
   return {
     "#isComponent": true,
     _id: 1,
     scripts: [txt, () => setTxt(!txt)],
-    components: [],
-    dom: ["h1", { onClick: 1 }, [0]],
+    components: [Children],
+    dom: ["h1", { onClick: 1 }, [0, " ", [0, {}, []]]],
   };
 }
 
@@ -34,9 +34,21 @@ render(
   {
     "#isComponent": true,
     _id: 0,
-    scripts: [],
-    components: [App],
-    dom: ["", {}, [[0, {}, []]]],
+    scripts: [App],
+    components: [],
+    dom: [
+      "div",
+      {},
+      [
+        ["Link", { href: "/" }, ["root"]],
+        [
+          "Link",
+          { href: "/index.html", pageTitle: "index page" },
+          ["index.html"],
+        ],
+        ["Route", { paths: "/index.html", component: 0 }, ["im a Child"]],
+      ],
+    ],
   },
-  () => document.getElementById("root")
+  "root"
 );

@@ -12,7 +12,7 @@ export const checkMatchedStr = function (str, isExact) {
     };
   },
   checkIfCustomTag = function (tag) {
-    return /^(|Route|Switch|)$/.test(tag);
+    return /^(|Route|Switch|Link)$/.test(tag);
   },
   encodeHTML = function (node) {
     return String(node).replace(/&#60;|&#62;/, function (m) {

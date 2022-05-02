@@ -1,5 +1,5 @@
 import { Hooks } from "./hooks.js";
-import { renderRoute } from "./router.js";
+import { renderLink, renderRoute } from "./router.js";
 import {
   scriptify,
   encodeHTML,
@@ -45,7 +45,7 @@ export default function (root, el) {
   if (!root["#isComponent"]) return "the root element is not a JSX Component";
 
   const result = render(root),
-    target = el();
+    target = document.getElementById(el);
 
   result instanceof Array
     ? result.forEach((e) => target.appendChild(e))
@@ -254,6 +254,8 @@ function renderDOM([tag, props, children]) {
     switch (tag) {
       case "Route":
         return renderRoute(props, children);
+      case "Link":
+        return renderLink(props, children);
       default:
         // we should return Array Of Nodes
         return children.map(handleSingleNode);
