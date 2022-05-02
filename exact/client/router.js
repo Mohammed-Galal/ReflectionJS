@@ -7,7 +7,7 @@ const Routes = new Set(),
 window.addEventListener("popstate", () => Routes.forEach(($) => $()));
 
 export function renderRoute(obj, $children) {
-  let fallback = DismatchedComment(),
+  let fallback = null,
     el = null,
     current;
 
@@ -45,6 +45,7 @@ export function renderRoute(obj, $children) {
         dom: children,
       });
 
+    fallback = DismatchedComment();
     obj.component = component.current;
     checkMatchedStr(paths, isExact) && (el = render(obj.component, props));
 
