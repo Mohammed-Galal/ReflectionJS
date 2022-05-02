@@ -1,9 +1,11 @@
 import { handleSingleNode, Components, render } from "./index.js";
 import { checkMatchedStr } from "./utils.js";
 
-const Routes = new Set();
+const Routes = new Set(),
+  DismatchedComment = new Text("");
 
-const DismatchedComment = new Text("");
+window.addEventListener("popstate", () => Routes.forEach(($) => $()));
+
 export function renderRoute(obj, $children) {
   let fallback = DismatchedComment,
     el = null,
