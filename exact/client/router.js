@@ -2,12 +2,12 @@ import { handleSingleNode, Components, render } from "./index.js";
 import { checkMatchedStr } from "./utils.js";
 
 const Routes = new Set(),
-  DismatchedComment = new Text("");
+  DismatchedComment = () => new Text("");
 
 window.addEventListener("popstate", () => Routes.forEach(($) => $()));
 
 export function renderRoute(obj, $children) {
-  let fallback = DismatchedComment,
+  let fallback = DismatchedComment(),
     el = null,
     current;
 
@@ -22,7 +22,7 @@ export function renderRoute(obj, $children) {
     paths = typeof obj[key] === "number" ? scripts[obj[key]].current : obj[key];
 
   if (component === undefined) {
-    fallback = Array(children.length).fill(DismatchedComment);
+    fallback = children.map(DismatchedComment);
 
     Routes.add(function () {
       if (checkMatchedStr(paths, isExact)) {

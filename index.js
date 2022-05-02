@@ -47,7 +47,7 @@ render(
           [["", {}, ["index.html"]]],
         ],
         // ["Route", { paths: "/index.html", component: 0 }, ["im a Child"]],
-        ["Route", { paths: "/index.html" }, ["im a Child"]],
+        ["Route", { paths: "/index.html" }, ["im a Child", "poipo", "kpokpo"]],
       ],
     ],
   },
