@@ -1,11 +1,13 @@
 import { Hooks } from "./hooks.js";
 import { renderLink, renderRoute, renderSwitch } from "./router.js";
-import {
-  scriptify,
-  encodeHTML,
-  checkIfCustomTag,
-  checkMatchedStr,
-} from "./utils.js";
+import { scriptify, encodeHTML, isCustomTag } from "./utils.js";
+
+HTMLElement.prototype.adopt = function reCall(node) {
+  node instanceof Array
+    ? node.forEach(reCall.bind(this))
+    : this.appendChild(node);
+  return this;
+};
 
 function _typeof(obj) {
   "@babel/helpers - typeof";
@@ -28,28 +30,18 @@ function _typeof(obj) {
 }
 
 export var Components = {
-  root: [],
-  get currentParent() {
-    return this.root[this.root.length - 1];
-  },
   updating: false,
   context: null,
 };
 
-const availDataTypes = ["string", "number", "boolean", "symbol", "function"],
-  cachedDomByKeys = new Map();
+const cachedDomByKeys = new Map();
 
 export default function (root, el) {
   if (typeof root === "function")
     throw "the root Component must not be a function";
   if (!root["#isComponent"]) return "the root element is not a JSX Component";
 
-  const result = render(root),
-    target = document.getElementById(el);
-
-  result instanceof Array
-    ? result.forEach((e) => target.appendChild(e))
-    : target.appendChild(result);
+  return document.getElementById(el).adopt(render(root));
 }
 
 export function render(fn, props, proxify) {
@@ -153,7 +145,7 @@ function handleComponent(_ref) {
       components: components,
     };
   Components.context = context;
-  context.el = renderDOM(dom);
+  context.el = handleElement(dom);
   Components.context = null;
   cachedContexts.set("" + _id, context);
   {
@@ -210,79 +202,49 @@ function handleComponent(_ref) {
   }
 }
 
-export function renderDOM([tag, props, children]) {
-  var scripts = Components.context.scripts,
-    components = Components.context.components;
+export function handleElement(element) {
+  const scripts = Components.context.scripts,
+    components = Components.context.components,
+    children = element[2].map(handleNode);
+
+  const tag = element[0],
+    props = element[1];
+
+  if (isCustomTag(tag)) return handleCustomElements(tag, props, children);
 
   if (typeof tag === "number") {
-    const propsKeys = Object.keys(props);
+    const dynamicProps = {};
 
-    children.length > 0 &&
-      (props.Children = {
-        "#isComponent": false,
-        "#isChild": true,
-        dom: children.map(handleSingleNode),
-      });
+    Object.keys(props).forEach(
+      (prop) =>
+        typeof props[prop] === "number" && (dynamicProps[prop] = props[prop])
+    );
 
-    var dynamicProps = {};
-    propsKeys.forEach(function (prop) {
-      var val = props[prop];
-      if (typeof val !== "number") return;
-      if (typeof scripts[val].current !== "function")
-        return (dynamicProps[prop] = val);
+    props.Children = {
+      "#isComponent": false,
+      "#isChild": true,
+      dom: children,
+    };
 
-      props[prop] = function () {
-        return scripts[val].current.apply(null, arguments);
-      };
-    });
+    const keys = Object.keys(dynamicProps);
 
-    var Keys = Object.keys(dynamicProps);
     return render(
       components[tag],
       function () {
-        Keys.forEach(function (prop) {
-          props[prop] = scripts[dynamicProps[prop]].current;
-        });
+        keys.forEach((key) => (props[key] = scripts[keys[key]].current));
         return props;
       },
       function (PR) {
-        Keys.forEach(function ($) {
-          scripts[dynamicProps[$]].deps.push(PR);
-        });
+        keys.forEach(($) => scripts[dynamicProps[$]].deps.push(PR));
       }
     );
-  } else if (checkIfCustomTag(tag)) {
-    switch (tag) {
-      case "Switch":
-        return renderSwitch(props, children);
-      case "Route":
-        return renderRoute(props, children);
-      case "Link":
-        return renderLink(props, children);
-      default:
-        // we should return Array Of Nodes
-        return children.map(handleSingleNode);
-    }
   }
 
   const el = document.createElement(tag);
 
-  attachAttrs(props, el);
-
-  children.map(handleSingleNode).forEach(function attachChildren(node) {
-    if (node instanceof Array) return node.forEach(attachChildren);
-    return el.appendChild(node);
-  });
-
-  return el;
-}
-
-export function attachAttrs(obj, el) {
-  const scripts = Components.context.scripts;
-
-  Object.keys(obj).forEach(function ($) {
+  Object.keys(props).forEach(function ($) {
     var attrName = $,
-      attrVal = obj[$];
+      attrVal = props[$];
     if (attrName === "class") return (attrName = "className");
     else if (attrName === "key") return;
     else if (typeof attrVal === "number") {
@@ -304,51 +266,71 @@ export function attachAttrs(obj, el) {
 
     el[attrName] = encodeHTML(attrVal);
   });
+
+  el.adopt(children);
+
+  return el;
 }
 
-export function handleSingleNode(node) {
-  const scripts = Components.context.scripts,
-    nodeType = _typeof(node);
+export function handleNode(node) {
+  const nodeType = _typeof(node);
 
   if (nodeType === "string") return new Text(encodeHTML(node));
   else if (nodeType === "number") {
-    var val = scripts[node],
-      isNotPremitive = availDataTypes.some(function (D) {
-        return _typeof(D) !== val;
-      });
+    const scripts = Components.context.scripts,
+      script = scripts[node];
 
-    if (isNotPremitive && val instanceof Array && val[0]["#isComponent"])
-      return val.deps.push(renderLoop(val.current));
+    if (script instanceof Array) {
+      const result = renderLoop(script);
+      script.deps.push(result.update);
+      return result.dom;
+    }
 
-    var TXT = new Text(""),
-      reseter = function reseter() {
-        TXT.textContent = encodeHTML(val.current);
-      };
-
-    reseter();
-    scripts[node].deps.push(reseter);
+    const TXT = new Text("");
+    reset();
+    script.deps.push(reset);
     return TXT;
+
+    function reset() {
+      TXT.textContent = encodeHTML(script.current);
+    }
   }
 
-  return renderDOM(node);
+  return handleElement(node);
 }
 
-function renderLoop(arr, container) {
-  var map = arr.map(function (component) {
-    return render(component);
-  });
-  map.forEach(function (C) {
-    return container.appendChild(C);
-  });
-  return function () {
-    map.forEach(function (C) {
-      return container.removeChild(C);
-    });
-    map = arr.map(function (component) {
-      return render(component);
-    });
-    map.forEach(function (C) {
-      return container.appendChild(C);
-    });
+function renderLoop(arrOfEls) {
+  const children = arrOfEls.map(render);
+
+  return {
+    dom: children,
+    update: function () {
+      let currentIndex = 0;
+      arrOfEls.forEach((C, ind) => {
+        const result = render(C);
+
+        if (result === children[ind]) return (current = ind);
+
+        currentIndex === 0
+          ? children[ind].replaceWith(result)
+          : children[currentIndex].after(result);
+
+        children[ind] = result;
+        currentIndex = ind;
+      });
+    },
   };
+}
+
+function handleCustomElements(tag, props, children) {
+  switch (tag) {
+    case "Switch":
+      return renderSwitch(props, children);
+    case "Route":
+      return renderRoute(props, children);
+    case "Link":
+      return renderLink(props, children);
+    default:
+      return children;
+  }
 }

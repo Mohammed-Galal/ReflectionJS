@@ -11,8 +11,8 @@ export const checkMatchedStr = function (str, isExact) {
       deps: [],
     };
   },
-  checkIfCustomTag = function (tag) {
-    return /^(|Route|Switch|Link)$/.test(tag);
+  isCustomTag = function (tag) {
+    return /^(Switch|Route|Link|)$/.test(tag);
   },
   encodeHTML = function (node) {
     return String(node).replace(/&#60;|&#62;/, function (m) {

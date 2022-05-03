@@ -1,5 +1,5 @@
 import { checkMatchedStr } from "./utils.js";
-import { handleSingleNode, Components, render, renderDOM } from "./index.js";
+import { Components, render, handleElement } from "./index.js";
 
 const Listeners = new Set(),
   updateRoutes = function () {
@@ -9,14 +9,13 @@ const Listeners = new Set(),
 
 window.addEventListener("popstate", updateRoutes);
 
-export function renderRoute(obj, $children) {
+export function renderRoute(obj, children) {
   let fallback = null,
     el = null,
     current;
 
   const scripts = Components.context.scripts,
     component = scripts[obj.component],
-    children = $children.map(handleSingleNode).flat(2),
     props = function () {
       return obj;
     },
@@ -41,12 +40,11 @@ export function renderRoute(obj, $children) {
 
     current = checkMatchedStr(paths, isExact) ? children : fallback;
   } else {
-    children.length > 0 &&
-      (obj.Children = {
-        "#isComponent": false,
-        "#isChild": true,
-        dom: children,
-      });
+    obj.Children = {
+      "#isComponent": false,
+      "#isChild": true,
+      dom: children,
+    };
 
     fallback = DismatchedComment();
     obj.component = component.current;
@@ -72,11 +70,11 @@ export function renderRoute(obj, $children) {
 }
 
 export function renderLink(obj, children) {
-  const el = renderDOM(["a", obj, children]),
+  const el = handleElement(["a", obj, []]),
     href = () => el.getAttribute("href"),
     title = el.title ? () => el.title : () => document.title;
 
-  el.addEventListener("click", function (e) {
+  el.adopt(children).addEventListener("click", function (e) {
     e.preventDefault();
     const link = href();
     if (link === document.location.pathname) return;
@@ -102,8 +100,8 @@ export function renderLink(obj, children) {
   return el;
 }
 
-// const Routes = new Map();
-// export function renderSwitch(children) {
-// {active: Boolean, update:Function}
-//   return;
-// }
+const Routes = new Map();
+export function renderSwitch(children) {
+  // {active: Boolean, update:Function}
+  return;
+}
