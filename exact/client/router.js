@@ -86,7 +86,11 @@ export function renderLink(obj, children) {
 
   el.addEventListener("click", function (e) {
     e.preventDefault();
-    window.history.pushState({ page: href }, title, href);
+    window.history.pushState(
+      { page: href },
+      title || document.location.pathname,
+      href
+    );
     Routes.forEach(($) => $());
   });
 
