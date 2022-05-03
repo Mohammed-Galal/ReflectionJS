@@ -4,17 +4,31 @@ import { useState } from "./exact/client/hooks.js";
 const listOfComponents = [
   {
     "#isComponent": true,
+    key: "One",
     _id: 3,
     scripts: [],
     components: [],
-    dom: ["p", { key: "lst" }, ["test list of components 1"]],
+    dom: ["Link", { href: "/" }, ["One"]],
   },
   {
     "#isComponent": true,
-    _id: 4,
+    key: "Two",
+    _id: 3,
     scripts: [],
     components: [],
-    dom: ["p", { key: "2nd" }, ["test list of components 2"]],
+    dom: ["Link", { href: "/depoik" }, ["Two"]],
+  },
+  {
+    "#isComponent": true,
+    key: "Three",
+    _id: 3,
+    scripts: [],
+    components: [],
+    dom: [
+      "Link",
+      { href: "/index.html", title: "index page" },
+      [["", {}, ["index.html"]]],
+    ],
   },
 ];
 
@@ -34,25 +48,18 @@ render(
   {
     "#isComponent": true,
     _id: 0,
-    scripts: [App],
     components: [],
+    scripts: [App, listOfComponents],
     dom: [
       "div",
       {},
       [
-        ["Link", { href: "/" }, ["root"]],
-        ["Link", { href: "/depoik" }, ["depoik"]],
-        [
-          "Link",
-          { href: "/index.html", title: "index page" },
-          [["", {}, ["index.html"]]],
-        ],
+        1,
         [
           "Route",
           { paths: "/index.html", component: 0 },
           ["im a Child", "poipo", "kpokpo"],
         ],
-        // ["Route", { paths: "/index.html" }, ["im a Child", "poipo", "kpokpo"]],
       ],
     ],
   },

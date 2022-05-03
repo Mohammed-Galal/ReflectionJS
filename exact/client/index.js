@@ -31,7 +31,16 @@ function _typeof(obj) {
 
 export var Components = {
   updating: false,
-  context: null,
+  currentActive: [],
+  get context() {
+    return this.currentActive[this.currentActive.length - 1];
+  },
+  addContext(context) {
+    this.currentActive.push(context);
+  },
+  popContext() {
+    this.currentActive.pop();
+  },
 };
 
 const cachedDomByKeys = new Map();
@@ -144,9 +153,9 @@ function handleComponent(_ref) {
       scripts: scripts.map(scriptify),
       components: components,
     };
-  Components.context = context;
+  Components.addContext(context);
   context.el = handleElement(dom);
-  Components.context = null;
+  Components.popContext();
   cachedContexts.set("" + _id, context);
   {
     dom = null;
@@ -280,8 +289,8 @@ export function handleNode(node) {
     const scripts = Components.context.scripts,
       script = scripts[node];
 
-    if (script instanceof Array) {
-      const result = renderLoop(script);
+    if (script.current instanceof Array) {
+      const result = renderLoop(script.current);
       script.deps.push(result.update);
       return result.dom;
     }
@@ -302,14 +311,28 @@ export function handleNode(node) {
 function renderLoop(arrOfEls) {
   const children = arrOfEls.map(render);
 
+  function cleanUp(startPos, endPos) {
+    while (startPos <= endPos) {
+      children[startPos].remove();
+      children[startPos] = undefined;
+      startPos++;
+    }
+  }
+
   return {
     dom: children,
     update: function () {
       let currentIndex = 0;
+
       arrOfEls.forEach((C, ind) => {
         const result = render(C);
 
         if (result === children[ind]) return (current = ind);
+        else if (children[ind] === undefined) {
+          children[ind] = result;
+          current = ind;
+          return;
+        }
 
         currentIndex === 0
           ? children[ind].replaceWith(result)
@@ -318,6 +341,8 @@ function renderLoop(arrOfEls) {
         children[ind] = result;
         currentIndex = ind;
       });
+
+      cleanUp(currentIndex + 1, children.length);
     },
   };
 }

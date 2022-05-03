@@ -47,13 +47,12 @@ export function renderRoute(obj, children) {
     };
 
     fallback = DismatchedComment();
-    obj.component = component.current;
-    checkMatchedStr(paths, isExact) && (el = render(obj.component, props));
+    checkMatchedStr(paths, isExact) && (el = render(component.current, props));
 
     Listeners.add(function () {
       if (checkMatchedStr(paths, isExact)) {
         if (current === el) return;
-        el === null && (el = render(obj.component, props));
+        el === null && (el = render(component.current, props));
         current.replaceWith(el);
         current = el;
       } else {
