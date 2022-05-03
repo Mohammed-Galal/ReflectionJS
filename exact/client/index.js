@@ -212,10 +212,11 @@ function handleComponent(_ref) {
 
 function renderDOM([tag, props, children]) {
   var scripts = Components.context.scripts,
-    components = Components.context.components,
-    propsKeys = Object.keys(props);
+    components = Components.context.components;
 
   if (typeof tag === "number") {
+    const propsKeys = Object.keys(props);
+
     children.length > 0 &&
       (props.Children = {
         "#isComponent": false,
@@ -266,11 +267,24 @@ function renderDOM([tag, props, children]) {
 
   const el = document.createElement(tag);
 
-  propsKeys.forEach(function ($) {
+  attachAttrs(props, el);
+
+  children.map(handleSingleNode).forEach(function attachChildren(node) {
+    if (node instanceof Array) return node.forEach(attachChildren);
+    return el.appendChild(node);
+  });
+
+  return el;
+}
+
+export function attachAttrs(obj, el) {
+  const scripts = Components.context.scripts;
+
+  Object.keys(obj).forEach(function ($) {
     var attrName = $,
-      attrVal = props[$];
-    if (attrName === "class") el["className"] = attrVal;
-    if (attrName === "key") return;
+      attrVal = obj[$];
+    if (attrName === "class") return (attrName = "className");
+    else if (attrName === "key") return;
     else if (typeof attrVal === "number") {
       if (/^on[A-Z]/.exec(attrName)) {
         attrName = attrName.toLowerCase().slice(2);
@@ -290,13 +304,6 @@ function renderDOM([tag, props, children]) {
 
     el[attrName] = attrVal;
   });
-
-  children.map(handleSingleNode).forEach(function reCall(node) {
-    if (node instanceof Array) return node.forEach(reCall);
-    return el.appendChild(node);
-  });
-
-  return el;
 }
 
 export function handleSingleNode(node) {

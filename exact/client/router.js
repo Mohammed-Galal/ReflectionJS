@@ -1,5 +1,5 @@
-import { handleSingleNode, Components, render } from "./index.js";
 import { checkMatchedStr } from "./utils.js";
+import { handleSingleNode, Components, render, attachAttrs } from "./index.js";
 
 const Routes = new Set(),
   DismatchedComment = () => new Text("");
@@ -69,12 +69,9 @@ export function renderRoute(obj, $children) {
 }
 
 export function renderLink(obj, children) {
-  const scripts = Components.context.scripts,
-    href = obj.href,
+  const href = obj.href,
     title = obj.pageTitle || document.title,
     el = document.createElement("a");
-
-  el.href = href;
 
   function setStateOFAnchor() {
     el.setAttribute("data-active", checkMatchedStr(href, true));
@@ -82,17 +79,6 @@ export function renderLink(obj, children) {
 
   setStateOFAnchor();
   Routes.add(setStateOFAnchor);
-
-  Object.keys(obj).forEach(function ($) {
-    if (/^(pageTitle|href)&/.test($)) return;
-    if (typeof obj[$] !== "number") return (el[$] = obj[$]);
-
-    function resetter() {
-      el[$] = scripts[obj[$]].current;
-    }
-    resetter();
-    el[$] = scripts[obj[$]].deps.push(resetter);
-  });
 
   el.addEventListener("click", function (e) {
     this.download = "/index.js";
@@ -102,8 +88,11 @@ export function renderLink(obj, children) {
     Routes.forEach(($) => $());
   });
 
-  children.map(handleSingleNode).forEach(function reCall(node) {
-    if (node instanceof Array) return node.forEach(reCall);
+  delete obj["pageTitle"];
+
+  attachAttrs(obj, el);
+  children.map(handleSingleNode).forEach(function attachChildren(node) {
+    if (node instanceof Array) return node.forEach(attachChildren);
     return el.appendChild(node);
   });
 
