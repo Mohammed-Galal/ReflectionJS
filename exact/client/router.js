@@ -70,7 +70,7 @@ export function renderRoute(obj, $children) {
 
 export function renderLink(obj, children) {
   const href = obj.href,
-    title = obj.pageTitle || document.title,
+    title = obj.title || document.title,
     el = document.createElement("a");
 
   function setStateOFAnchor() {
@@ -81,14 +81,11 @@ export function renderLink(obj, children) {
   Routes.add(setStateOFAnchor);
 
   el.addEventListener("click", function (e) {
-    this.download = "/index.js";
     e.preventDefault();
     document.title = title;
     window.history.pushState({ page: href }, title, href);
     Routes.forEach(($) => $());
   });
-
-  delete obj["pageTitle"];
 
   attachAttrs(obj, el);
   children.map(handleSingleNode).forEach(function attachChildren(node) {

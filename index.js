@@ -43,7 +43,7 @@ render(
         ["Link", { href: "/" }, ["root"]],
         [
           "Link",
-          { href: "/index.html", pageTitle: "index page" },
+          { href: "/index.html", title: "index page" },
           [["", {}, ["index.html"]]],
         ],
         // ["Route", { paths: "/index.html", component: 0 }, ["im a Child"]],
