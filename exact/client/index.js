@@ -210,7 +210,7 @@ function handleComponent(_ref) {
   }
 }
 
-function renderDOM([tag, props, children]) {
+export function renderDOM([tag, props, children]) {
   var scripts = Components.context.scripts,
     components = Components.context.components;
 
@@ -302,7 +302,7 @@ export function attachAttrs(obj, el) {
       return reseter();
     }
 
-    el[attrName] = attrVal;
+    el[attrName] = encodeHTML(attrVal);
   });
 }
 

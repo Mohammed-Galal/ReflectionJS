@@ -1,10 +1,13 @@
 import { checkMatchedStr } from "./utils.js";
-import { handleSingleNode, Components, render, attachAttrs } from "./index.js";
+import { handleSingleNode, Components, render, renderDOM } from "./index.js";
 
-const Routes = new Set(),
+const Listeners = new Set(),
+  updateRoutes = function () {
+    Listeners.forEach(($) => $());
+  },
   DismatchedComment = () => new Text("");
 
-window.addEventListener("popstate", () => Routes.forEach(($) => $()));
+window.addEventListener("popstate", updateRoutes);
 
 export function renderRoute(obj, $children) {
   let fallback = null,
@@ -13,7 +16,7 @@ export function renderRoute(obj, $children) {
 
   const scripts = Components.context.scripts,
     component = scripts[obj.component],
-    children = $children.map(handleSingleNode),
+    children = $children.map(handleSingleNode).flat(2),
     props = function () {
       return obj;
     },
@@ -24,7 +27,7 @@ export function renderRoute(obj, $children) {
   if (component === undefined) {
     fallback = children.map(DismatchedComment);
 
-    Routes.add(function () {
+    Listeners.add(function () {
       if (checkMatchedStr(paths, isExact)) {
         if (current === children) return;
         current.forEach(($, ind) => $.replaceWith(children[ind]));
@@ -49,7 +52,7 @@ export function renderRoute(obj, $children) {
     obj.component = component.current;
     checkMatchedStr(paths, isExact) && (el = render(obj.component, props));
 
-    Routes.add(function () {
+    Listeners.add(function () {
       if (checkMatchedStr(paths, isExact)) {
         if (current === el) return;
         el === null && (el = render(obj.component, props));
@@ -69,38 +72,38 @@ export function renderRoute(obj, $children) {
 }
 
 export function renderLink(obj, children) {
-  const href = obj.href,
-    title = obj.title,
-    el = document.createElement("a");
-
-  function setStateOFAnchor() {
-    if (checkMatchedStr(href, true)) {
-      title && (document.title = title);
-      el.classList.add("currentActive");
-    }
-    el.classList.remove("currentActive");
-  }
-
-  setStateOFAnchor();
-  Routes.add(setStateOFAnchor);
+  const el = renderDOM(["a", obj, children]),
+    href = () => el.getAttribute("href"),
+    title = el.title ? () => el.title : () => document.title;
 
   el.addEventListener("click", function (e) {
     e.preventDefault();
-    window.history.pushState(
-      { page: href },
-      title || document.location.pathname,
-      href
-    );
-    Routes.forEach(($) => $());
+    const link = href();
+    if (link === document.location.pathname) return;
+    const T = title();
+    window.history.pushState(obj.state || { state: T }, T, link);
+    updateRoutes();
   });
 
-  attachAttrs(obj, el);
-  children.map(handleSingleNode).forEach(function attachChildren(node) {
-    if (node instanceof Array) return node.forEach(attachChildren);
-    return el.appendChild(node);
+  if (checkMatchedStr(href(), true)) {
+    document.title = title();
+    el.classList.add("currentActiveLink");
+  }
+
+  Listeners.add(function () {
+    if (checkMatchedStr(href(), true)) {
+      document.title = title();
+      el.classList.add("currentActiveLink");
+      return;
+    }
+    el.classList.remove("currentActiveLink");
   });
 
   return el;
 }
 
-export function renderSwitch(obj, children) {}
+// const Routes = new Map();
+// export function renderSwitch(children) {
+// {active: Boolean, update:Function}
+//   return;
+// }

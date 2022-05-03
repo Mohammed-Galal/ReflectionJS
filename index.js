@@ -41,6 +41,7 @@ render(
       {},
       [
         ["Link", { href: "/" }, ["root"]],
+        ["Link", { href: "/depoik" }, ["depoik"]],
         [
           "Link",
           { href: "/index.html", title: "index page" },
