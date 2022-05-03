@@ -70,11 +70,15 @@ export function renderRoute(obj, $children) {
 
 export function renderLink(obj, children) {
   const href = obj.href,
-    title = obj.title || document.title,
+    title = obj.title,
     el = document.createElement("a");
 
   function setStateOFAnchor() {
-    el.setAttribute("data-active", checkMatchedStr(href, true));
+    if (checkMatchedStr(href, true)) {
+      title && (document.title = title);
+      el.classList.add("currentActive");
+    }
+    el.classList.remove("currentActive");
   }
 
   setStateOFAnchor();
@@ -82,7 +86,6 @@ export function renderLink(obj, children) {
 
   el.addEventListener("click", function (e) {
     e.preventDefault();
-    document.title = title;
     window.history.pushState({ page: href }, title, href);
     Routes.forEach(($) => $());
   });
