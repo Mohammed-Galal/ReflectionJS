@@ -1,10 +1,9 @@
 Node.prototype["#deps"] = [];
 HTMLElement.prototype.adopt = function (node) {
-  const el = this;
-  if (node instanceof Array) node.forEach(el.adopt.bind(el));
+  if (node instanceof Array) node.forEach(this.adopt.bind(this));
   else {
-    el.appendChild(node);
-    node["#deps"].forEach(el.adopt.bind(el));
+    this.appendChild(node);
+    node["#deps"].forEach(this.adopt.bind(this));
   }
   return this;
 };
@@ -18,10 +17,11 @@ Node.prototype.replace = function (newNode) {
       $["#deps"].forEach(reCall);
     });
 
+    const parent = this.parentElement;
     this.replaceWith(newNode);
-    newNode["#deps"].reverse().forEach(function reCall($) {
-      newNode.after($);
-      $["#deps"].reverse().forEach(reCall);
+    newNode["#deps"].forEach(function reCall($) {
+      parent.insertBefore(newNode, $);
+      $["#deps"].forEach(reCall);
     });
   }
   return newNode;
