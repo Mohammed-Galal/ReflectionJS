@@ -2,11 +2,23 @@ import { Hooks } from "./hooks.js";
 import { renderLink, renderRoute, renderSwitch } from "./router.js";
 import { scriptify, encodeHTML, isCustomTag } from "./utils.js";
 
+Node.prototype["#deps"] = [];
 HTMLElement.prototype.adopt = function reCall(node) {
-  node instanceof Array
-    ? node.forEach(reCall.bind(this))
-    : this.appendChild(node);
+  if (node instanceof Array) node.forEach(reCall.bind(this));
+  else {
+    this.appendChild(node);
+    node["#deps"].forEach(($) => node.after($));
+  }
   return this;
+};
+
+Node.prototype.replace = function (newNode) {
+  if (this === newNode) return newNode;
+  const parent = this.parentElement;
+  this["#deps"].forEach(($) => parent.removeChild($));
+  parent.replaceChild(this, newNode);
+  newNode["#deps"].forEach(($) => newNode.after($));
+  return newNode;
 };
 
 function _typeof(obj) {
@@ -309,7 +321,9 @@ export function handleNode(node) {
 }
 
 function renderLoop(arrOfEls) {
-  const children = arrOfEls.map(render);
+  const TXT = new Text("");
+  TXT["#deps"] = arrOfEls.map(render).reverse();
+  const children = TXT["#deps"];
 
   function cleanUp(startPos, endPos) {
     while (startPos <= endPos) {
@@ -320,26 +334,21 @@ function renderLoop(arrOfEls) {
   }
 
   return {
-    dom: children,
+    dom: TXT,
     update: function () {
       let currentIndex = 0;
 
-      arrOfEls.forEach((C, ind) => {
-        const result = render(C);
+      TXT["#deps"] = arrOfEls.map(render).reverse();
 
-        if (result === children[ind]) return (current = ind);
-        else if (children[ind] === undefined) {
-          children[ind] = result;
+      children.forEach((C, ind) => {
+        if (children[ind] === undefined) {
+          children[ind] = C;
+          TXT.after(C);
           current = ind;
-          return;
+          return ind;
         }
 
-        currentIndex === 0
-          ? children[ind].replaceWith(result)
-          : children[currentIndex].after(result);
-
-        children[ind] = result;
-        currentIndex = ind;
+        return children[ind].replace(C);
       });
 
       cleanUp(currentIndex + 1, children.length);
@@ -356,6 +365,9 @@ function handleCustomElements(tag, props, children) {
     case "Link":
       return renderLink(props, children);
     default:
-      return children;
+      const TXT = new Text("");
+      // a placeholder
+      TXT["#deps"] = children.reverse();
+      return TXT;
   }
 }

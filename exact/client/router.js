@@ -101,6 +101,7 @@ export function renderLink(obj, children) {
 
 const Routes = new Map();
 export function renderSwitch(children) {
+  const placeHolder = new Text("");
   // {active: Boolean, update:Function}
   return;
 }
