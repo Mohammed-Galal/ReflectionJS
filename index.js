@@ -51,7 +51,7 @@ render(
     components: [],
     scripts: [App, listOfComponents],
     dom: [
-      "div",
+      "",
       {},
       [
         1,

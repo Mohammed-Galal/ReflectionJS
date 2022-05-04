@@ -1,25 +1,7 @@
+import "./bootstrap.js";
 import { Hooks } from "./hooks.js";
 import { renderLink, renderRoute, renderSwitch } from "./router.js";
 import { scriptify, encodeHTML, isCustomTag } from "./utils.js";
-
-Node.prototype["#deps"] = [];
-HTMLElement.prototype.adopt = function reCall(node) {
-  if (node instanceof Array) node.forEach(reCall.bind(this));
-  else {
-    this.appendChild(node);
-    node["#deps"].forEach(($) => node.after($));
-  }
-  return this;
-};
-
-Node.prototype.replace = function (newNode) {
-  if (this === newNode) return newNode;
-  const parent = this.parentElement;
-  this["#deps"].forEach(($) => parent.removeChild($));
-  parent.replaceChild(this, newNode);
-  newNode["#deps"].forEach(($) => newNode.after($));
-  return newNode;
-};
 
 function _typeof(obj) {
   "@babel/helpers - typeof";
@@ -41,6 +23,14 @@ function _typeof(obj) {
   );
 }
 
+export default function (root, el) {
+  if (typeof root === "function")
+    throw "the root Component must not be a function";
+  if (!root["#isComponent"]) return "the root element is not a JSX Component";
+
+  return document.getElementById(el).adopt(render(root));
+}
+
 export var Components = {
   updating: false,
   currentActive: [],
@@ -56,15 +46,6 @@ export var Components = {
 };
 
 const cachedDomByKeys = new Map();
-
-export default function (root, el) {
-  if (typeof root === "function")
-    throw "the root Component must not be a function";
-  if (!root["#isComponent"]) return "the root element is not a JSX Component";
-
-  return document.getElementById(el).adopt(render(root));
-}
-
 export function render(fn, props, proxify) {
   let hooksContext = {
     useBatch: new Set(),
@@ -322,7 +303,7 @@ export function handleNode(node) {
 
 function renderLoop(arrOfEls) {
   const TXT = new Text("");
-  TXT["#deps"] = arrOfEls.map(render).reverse();
+  TXT["#deps"] = arrOfEls.map(render);
   const children = TXT["#deps"];
 
   function cleanUp(startPos, endPos) {
@@ -365,9 +346,9 @@ function handleCustomElements(tag, props, children) {
     case "Link":
       return renderLink(props, children);
     default:
+      // TXT = a placeholder
       const TXT = new Text("");
-      // a placeholder
-      TXT["#deps"] = children.reverse();
+      TXT["#deps"] = children;
       return TXT;
   }
 }
