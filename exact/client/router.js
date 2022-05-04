@@ -71,24 +71,23 @@ export function renderRoute(obj, children) {
 export function renderLink(obj, children) {
   const el = handleElement(["a", obj, []]),
     href = () => el.getAttribute("href"),
-    title = el.title || document.title;
+    title = () => el.title || document.title;
 
   el.adopt(children).addEventListener("click", function (e) {
     e.preventDefault();
     const link = href();
     if (link === document.location.pathname) return;
-    window.history.pushState(obj.state || { state: title }, title, link);
+    window.history.pushState(obj.state || { state: title() }, title(), link);
     updateRoutes();
   });
 
   if (checkMatchedStr(href(), true)) {
-    document.title = title;
+    document.title = title();
     el.classList.add("currentActiveLink");
   }
 
   Listeners.add(function () {
     if (checkMatchedStr(href(), true)) {
-      document.title = title;
       el.classList.add("currentActiveLink");
       return;
     }
