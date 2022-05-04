@@ -9,8 +9,25 @@ const Listeners = new Set(),
 
 window.addEventListener("popstate", updateRoutes);
 
-export function renderRoute(obj, children) {
-  let fallback = null,
+export default function handleCustomElements(tag, props, children) {
+  switch (tag) {
+    case "Switch":
+      return renderSwitch(props, children);
+    case "Route":
+      return renderRoute(props, children);
+    case "Link":
+      return renderLink(props, children);
+    default:
+      // TXT = a placeholder
+      const TXT = new Text("");
+      TXT["#deps"] = children;
+      return TXT;
+  }
+}
+
+function renderRoute(obj, children) {
+  let isActive = false,
+    fallback = null,
     el = null,
     current;
 
@@ -28,17 +45,20 @@ export function renderRoute(obj, children) {
 
     Listeners.add(function () {
       if (checkMatchedStr(paths, isExact)) {
+        isActive = true;
         if (current === children) return;
         current.forEach(($, ind) => $.replaceWith(children[ind]));
         current = children;
       } else {
+        isActive = false;
         if (current === fallback) return;
         current.forEach(($, ind) => $.replaceWith(fallback[ind]));
         current = fallback;
       }
     });
 
-    current = checkMatchedStr(paths, isExact) ? children : fallback;
+    isActive = checkMatchedStr(paths, isExact);
+    current = isActive ? children : fallback;
   } else {
     obj.Children = {
       "#isComponent": false,
@@ -47,15 +67,18 @@ export function renderRoute(obj, children) {
     };
 
     fallback = DismatchedComment();
-    checkMatchedStr(paths, isExact) && (el = render(component.current, props));
+    isActive = checkMatchedStr(paths, isExact);
+    isActive && (el = render(component.current, props));
 
     Listeners.add(function () {
       if (checkMatchedStr(paths, isExact)) {
+        isActive = true;
         if (current === el) return;
         el === null && (el = render(component.current, props));
         current.replaceWith(el);
         current = el;
       } else {
+        isActive = false;
         if (current === fallback) return;
         current.replaceWith(fallback);
         current = fallback;
@@ -68,7 +91,7 @@ export function renderRoute(obj, children) {
   return current;
 }
 
-export function renderLink(obj, children) {
+function renderLink(obj, children) {
   const el = handleElement(["a", obj, []]),
     href = () => el.getAttribute("href"),
     title = () => el.title || document.title;

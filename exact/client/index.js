@@ -1,6 +1,6 @@
 import "./bootstrap.js";
 import { Hooks } from "./hooks.js";
-import { renderLink, renderRoute, renderSwitch } from "./router.js";
+import handleCustomElements from "./router.js";
 import { scriptify, encodeHTML, isCustomTag } from "./utils.js";
 
 function _typeof(obj) {
@@ -308,6 +308,7 @@ function renderLoop(arrOfEls) {
 
   function cleanUp(startPos, endPos) {
     while (startPos <= endPos) {
+      children[startPos]["#deps"].forEach(($) => $.remove());
       children[startPos].remove();
       children[startPos] = undefined;
       startPos++;
@@ -318,37 +319,18 @@ function renderLoop(arrOfEls) {
     dom: TXT,
     update: function () {
       let currentIndex = 0;
-
-      TXT["#deps"] = arrOfEls.map(render).reverse();
+      TXT["#deps"] = arrOfEls.map(render);
 
       children.forEach((C, ind) => {
-        if (children[ind] === undefined) {
-          children[ind] = C;
-          TXT.after(C);
-          current = ind;
-          return ind;
-        }
+        children[ind] === undefined
+          ? children[ind].after(C)
+          : children[ind].replace(C);
 
-        return children[ind].replace(C);
+        children[ind] = C;
+        current = ind;
       });
 
       cleanUp(currentIndex + 1, children.length);
     },
   };
-}
-
-function handleCustomElements(tag, props, children) {
-  switch (tag) {
-    case "Switch":
-      return renderSwitch(props, children);
-    case "Route":
-      return renderRoute(props, children);
-    case "Link":
-      return renderLink(props, children);
-    default:
-      // TXT = a placeholder
-      const TXT = new Text("");
-      TXT["#deps"] = children;
-      return TXT;
-  }
 }
