@@ -1,6 +1,6 @@
 Node.prototype["#deps"] = [];
-HTMLElement.prototype.adopt = function reCall(node) {
-  if (node instanceof Array) node.forEach(reCall.bind(this));
+HTMLElement.prototype.adopt = function (node) {
+  if (node instanceof Array) node.forEach(this.adopt.bind(this));
   else {
     const el = this;
     this.appendChild(node);
@@ -14,6 +14,6 @@ Node.prototype.replace = function (newNode) {
   const parent = this.parentElement;
   this["#deps"].forEach(($) => parent.removeChild($));
   parent.replaceChild(this, newNode);
-  newNode["#deps"].forEach(($) => newNode.after($));
+  newNode["#deps"].reverse().forEach(($) => newNode.after($));
   return newNode;
 };
