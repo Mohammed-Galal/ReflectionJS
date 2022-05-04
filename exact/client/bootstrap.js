@@ -11,9 +11,18 @@ HTMLElement.prototype.adopt = function (node) {
 
 Node.prototype.replace = function (newNode) {
   if (this === newNode) return newNode;
-  const parent = this.parentElement;
-  this["#deps"].forEach(($) => parent.removeChild($));
-  parent.replaceChild(this, newNode);
-  newNode["#deps"].reverse().forEach(($) => newNode.after($));
+  if (newNode instanceof Array) newNode.forEach(this.replace.bind(this));
+  else {
+    this["#deps"].forEach(function reCall($) {
+      newNode.remove($);
+      $["#deps"].forEach(reCall);
+    });
+
+    this.replaceWith(newNode);
+    newNode["#deps"].reverse().forEach(function reCall($) {
+      newNode.after($);
+      $["#deps"].reverse().forEach(reCall);
+    });
+  }
   return newNode;
 };

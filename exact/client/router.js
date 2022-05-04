@@ -1,5 +1,5 @@
 import { checkMatchedStr } from "./utils.js";
-import { Components, render, handleElement } from "./index.js";
+import { Components, render, handleElement, handleNode } from "./index.js";
 
 const Listeners = new Set(),
   updateRoutes = function () {
@@ -12,22 +12,22 @@ window.addEventListener("popstate", updateRoutes);
 export default function handleCustomElements(tag, props, children) {
   switch (tag) {
     case "Switch":
-      return renderSwitch(props, children);
+      return renderSwitch(children);
     case "Route":
-      return renderRoute(props, children);
+      return renderRoute(props, children.map(handleNode));
     case "Link":
-      return renderLink(props, children);
+      return renderLink(props, children.map(handleNode));
     default:
       // TXT = a placeholder
       const TXT = new Text("");
-      TXT["#deps"] = children;
+      TXT["#deps"] = children.map(handleNode);
       return TXT;
   }
 }
 
+let SwitchOn = false;
 function renderRoute(obj, children) {
-  let isActive = false,
-    fallback = null,
+  let fallback = null,
     el = null,
     current;
 
@@ -40,24 +40,23 @@ function renderRoute(obj, children) {
     key = isExact ? "exact:paths" : "paths",
     paths = typeof obj[key] === "number" ? scripts[obj[key]].current : obj[key];
 
+  let isActive = checkMatchedStr(paths, isExact);
   if (component === undefined) {
     fallback = children.map(DismatchedComment);
 
     Listeners.add(function () {
-      if (checkMatchedStr(paths, isExact)) {
-        isActive = true;
+      isActive = checkMatchedStr(paths, isExact);
+      if (isActive) {
         if (current === children) return;
-        current.forEach(($, ind) => $.replaceWith(children[ind]));
+        current.forEach(($, ind) => $.replace(children[ind]));
         current = children;
       } else {
-        isActive = false;
         if (current === fallback) return;
-        current.forEach(($, ind) => $.replaceWith(fallback[ind]));
+        current.forEach(($, ind) => $.replace(fallback[ind]));
         current = fallback;
       }
     });
 
-    isActive = checkMatchedStr(paths, isExact);
     current = isActive ? children : fallback;
   } else {
     obj.Children = {
@@ -67,20 +66,18 @@ function renderRoute(obj, children) {
     };
 
     fallback = DismatchedComment();
-    isActive = checkMatchedStr(paths, isExact);
     isActive && (el = render(component.current, props));
 
     Listeners.add(function () {
-      if (checkMatchedStr(paths, isExact)) {
-        isActive = true;
+      isActive = checkMatchedStr(paths, isExact);
+      if (isActive) {
         if (current === el) return;
         el === null && (el = render(component.current, props));
-        current.replaceWith(el);
+        current.replace(el);
         current = el;
       } else {
-        isActive = false;
         if (current === fallback) return;
-        current.replaceWith(fallback);
+        current.replace(fallback);
         current = fallback;
       }
     });
@@ -88,7 +85,7 @@ function renderRoute(obj, children) {
     current = el || fallback;
   }
 
-  return current;
+  return SwitchOn ? { "#isRoute": true, isActive, current } : current;
 }
 
 function renderLink(obj, children) {
@@ -123,6 +120,10 @@ function renderLink(obj, children) {
 const Routes = new Map();
 export function renderSwitch(children) {
   const placeHolder = new Text("");
-  // {active: Boolean, update:Function}
-  return;
+
+  SwitchOn = true;
+  placeHolder["#deps"] = children.map(handleNode);
+  SwitchOn = false;
+
+  return placeHolder["#deps"];
 }

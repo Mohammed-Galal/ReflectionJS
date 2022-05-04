@@ -206,14 +206,14 @@ function handleComponent(_ref) {
 
 export function handleElement(element) {
   const scripts = Components.context.scripts,
-    components = Components.context.components,
-    children = element[2].map(handleNode);
+    components = Components.context.components;
 
   const tag = element[0],
     props = element[1];
 
-  if (isCustomTag(tag)) return handleCustomElements(tag, props, children);
+  if (isCustomTag(tag)) return handleCustomElements(tag, props, element[2]);
 
+  const children = element[2].map(handleNode);
   if (typeof tag === "number") {
     const dynamicProps = {};
 

@@ -57,8 +57,8 @@ render(
         1,
         [
           "Route",
-          // { paths: "/index.html", component: 0 },
-          { paths: "/index.html" },
+          { paths: "/index.html", component: 0 },
+          // { paths: "/index.html" },
           ["im a Child", "poipo", "kpokpo"],
         ],
       ],
