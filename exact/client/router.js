@@ -18,7 +18,6 @@ export default function handleCustomElements(tag, props, children) {
     case "Link":
       return renderLink(props, children.map(handleNode));
     default:
-      // TXT = a placeholder
       const TXT = new Text("");
       TXT["#deps"] = children.map(handleNode);
       return TXT;
@@ -33,9 +32,6 @@ function renderRoute(obj, children) {
 
   const scripts = Components.context.scripts,
     component = scripts[obj.component],
-    props = function () {
-      return obj;
-    },
     isExact = "exact:paths" in obj,
     key = isExact ? "exact:paths" : "paths",
     paths = typeof obj[key] === "number" ? scripts[obj[key]].current : obj[key];
@@ -59,20 +55,35 @@ function renderRoute(obj, children) {
 
     current = isActive ? children : fallback;
   } else {
-    obj.Children = {
-      "#isComponent": false,
-      "#isChild": true,
-      dom: children,
+    const props = {
+      targetedRoutes: { paths, isExact },
+      Children: {
+        "#isComponent": false,
+        "#isChild": true,
+        dom: children,
+      },
     };
 
     fallback = DismatchedComment();
-    isActive && (el = render(component.current, props));
+
+    if (isActive) {
+      props.location = new URL(document.location);
+      props.location.params = isActive.groups;
+      el = render(component.current, function () {
+        return props;
+      });
+    }
 
     Listeners.add(function () {
       isActive = checkMatchedStr(paths, isExact);
       if (isActive) {
         if (current === el) return;
-        el === null && (el = render(component.current, props));
+        props.location = new URL(document.location);
+        props.location.params = isActive.groups;
+        el === null &&
+          (el = render(component.current, function () {
+            return props;
+          }));
         current.replace(el);
         current = el;
       } else {

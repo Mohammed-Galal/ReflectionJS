@@ -322,9 +322,11 @@ function renderLoop(arrOfEls) {
       TXT["#deps"] = arrOfEls.map(render);
 
       children.forEach((C, ind) => {
-        children[ind] === undefined
-          ? children[ind].after(C)
-          : children[ind].replace(C);
+        children[ind] !== undefined
+          ? children[ind].replace(C)
+          : children.length === 0
+          ? TXT.insertBefore(C)
+          : children[ind].after(C);
 
         children[ind] = C;
         current = ind;

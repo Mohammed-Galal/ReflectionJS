@@ -8,7 +8,7 @@ const listOfComponents = [
     _id: 3,
     scripts: [],
     components: [],
-    dom: ["Link", { href: "/" }, ["One"]],
+    dom: ["Link", { href: "/index" }, ["One"]],
   },
   {
     "#isComponent": true,
@@ -16,7 +16,7 @@ const listOfComponents = [
     _id: 3,
     scripts: [],
     components: [],
-    dom: ["Link", { href: "/depoik" }, ["Two"]],
+    dom: ["Link", { href: "/about" }, ["Two"]],
   },
   {
     "#isComponent": true,
@@ -32,14 +32,16 @@ const listOfComponents = [
   },
 ];
 
-function App({ Children }) {
+function App(props) {
   const [txt, setTxt] = useState(true);
+
+  console.log(props);
 
   return {
     "#isComponent": true,
     _id: 1,
     scripts: [txt, () => setTxt(!txt)],
-    components: [Children],
+    components: [props.Children],
     dom: ["h1", { onClick: 1 }, [0, " ", [0, {}, []]]],
   };
 }
@@ -57,7 +59,7 @@ render(
         1,
         [
           "Route",
-          { paths: "/index.html", component: 0 },
+          { "exact:paths": "/:index", component: 0 },
           // { paths: "/index.html" },
           ["im a Child", "poipo", "kpokpo"],
         ],

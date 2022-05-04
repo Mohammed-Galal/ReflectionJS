@@ -1,9 +1,18 @@
-export const checkMatchedStr = function (str, isExact) {
-    str = str || document.location.pathname;
-    if (str instanceof Array) return str.some(checkMatchedStr);
+function replacer(m) {
+  return "(?<" + m.slice(1) + ">\\w+)(\\.\\w+)*";
+}
+export const checkMatchedStr = function ($str, isExact) {
+    if ($str === undefined) return true;
+
+    const isArray = $str instanceof Array,
+      str = isArray
+        ? $str.map(replacer)
+        : $str.replace(/:(?<param>\w+)/g, replacer);
+
+    if (isArray) return str.some(checkMatchedStr);
     const currentLocation = document.location.pathname,
       regExp = isExact ? "^" + str + "$" : "^" + str;
-    return new RegExp(regExp).test(currentLocation);
+    return new RegExp(regExp).exec(currentLocation);
   },
   scriptify = function (val) {
     return {
