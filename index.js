@@ -48,11 +48,17 @@ render(
       {},
       [
         1,
-        ["Route", { paths: "/", component: 0 }, ["root Component"]],
         [
-          "Route",
-          { "exact:paths": "/:index", component: 0 },
-          ["im a Child", "poipo", "kpokpo"],
+          "Switch",
+          {},
+          [
+            [
+              "Route",
+              { "exact:paths": "/:index", component: 0 },
+              ["im a Child", "poipo", "kpokpo"],
+            ],
+            ["Route", { paths: "/", component: 0 }, ["root Component"]],
+          ],
         ],
       ],
     ],

@@ -1,6 +1,7 @@
-module.exports = function (arr, components) {
+// module.exports = function (arr, components) {
+export default function (arr, components) {
   const [tag, ...attrs] = arr,
-    result = [tag, null, []];
+    result = [tag, {}, []];
 
   handling_Attrs: {
     if (attrs.length > 0) {
@@ -24,4 +25,4 @@ module.exports = function (arr, components) {
     }
   }
   return result;
-};
+}

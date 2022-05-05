@@ -121,7 +121,7 @@ function renderRoute(obj, children) {
           return isActive;
         },
         get current() {
-          return current;
+          return placeHolder;
         },
       }
     : placeHolder;
@@ -143,10 +143,12 @@ function renderSwitch($children) {
   Listeners.add(function () {
     result = children.find((el) => el.isActive);
     if (result) {
-      currentRoute.replace(fallback);
+      currentRoute.replace(result.current);
       currentRoute = result.current;
       return;
     }
+    currentRoute.replace(fallback);
+    currentRoute = fallback;
   });
 
   return currentRoute;

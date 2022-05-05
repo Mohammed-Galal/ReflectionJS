@@ -1,12 +1,15 @@
-const handleNewEl = require("./handleNewElement"),
-  parseStrings = require("./parseStrings");
+import handleNewEl from "./handleNewElement.js";
+import parseStrings from "./parseStrings.js";
+// const handleNewEl = require("./handleNewElement"),
+//   parseStrings = require("./parseStrings");
 
 const rootElementCatcher = /<(?<name>(\w+)?)[^]+?<\/(\k<name>)>|<\S[^]+\/>/g,
   scriptsCatcher = /(?={)|(?=})|(?<=})/g,
   splitExp = /<(?=\/)|(?=<)|(?<!\/)>|\s*(?=\/>)|(?<=\/>)/g;
 
 let key = 0;
-module.exports = function (txt) {
+// module.exports = function (txt) {
+export default function (txt) {
   return (
     txt
       // .replace(/<>|<\/>/g, (m) => (m === "<>" ? "<fragment>" : "</fragment>"))
@@ -59,7 +62,7 @@ module.exports = function (txt) {
       "}"
     );
   }
-};
+}
 
 let holder = "",
   counter = 0;

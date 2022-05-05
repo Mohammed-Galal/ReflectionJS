@@ -1,3 +1,5 @@
 Node [before, remove]
 
 Array [map, forEach, find]
+
+Function [bind]

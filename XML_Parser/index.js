@@ -1,7 +1,9 @@
-const parse = require("./utils/parser");
+// const parse = require("./utils/parser");
+import parse from "./utils/parser.js";
+import fs from "fs";
 
-const fs = require("fs"),
-  xmlTxt = fs.readFileSync("./index.jsx", "utf-8");
+// const fs = require("fs"),
+const xmlTxt = fs.readFileSync("./index.jsx", "utf-8");
 
 const result = parse(xmlTxt);
 
