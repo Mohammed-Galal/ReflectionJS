@@ -109,7 +109,7 @@ function renderRoute(obj, children) {
         placeHolder.before(cachedEL);
         placeHolder["#deps"] = [cachedEL];
       } else {
-        placeHolder["#deps"][0].remove();
+        placeHolder["#deps"].forEach(($) => $.remove());
         placeHolder["#deps"] = [];
       }
     });

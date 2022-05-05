@@ -1,13 +1,14 @@
-function replacer(m) {
-  return "(?<" + m.slice(1) + ">\\w+)(\\.\\w+)*";
+function replacer(str) {
+  return String(str).replace(
+    /:(?<param>\w+)/g,
+    (m) => "(?<" + m.slice(1) + ">\\w+)(\\.\\w+)*"
+  );
 }
 export const checkMatchedStr = function ($str, isExact) {
     if ($str === undefined) return true;
 
     const isArray = $str instanceof Array,
-      str = isArray
-        ? $str.map(replacer)
-        : $str.replace(/:(?<param>\w+)/g, replacer);
+      str = isArray ? $str.map(replacer) : replacer($str);
 
     if (isArray) return str.some(checkMatchedStr);
     const currentLocation = document.location.pathname,

@@ -14,7 +14,7 @@ const listOfComponents = [
     _id: 3,
     scripts: [],
     components: [],
-    dom: ["Link", { href: "/about" }, ["Two"]],
+    dom: ["Link", { href: "/about/dd" }, ["Two"]],
   },
   {
     "#isComponent": true,
@@ -54,12 +54,14 @@ render(
           [
             [
               "Route",
-              { "exact:paths": "/:index", component: 0 },
+              { "exact:paths": "/about/:d", component: 0 },
               ["im a Child", "poipo", "kpokpo"],
             ],
-            ["Route", { paths: "/", component: 0 }, ["root Component"]],
+            ["Route", { "exact:paths": "/", component: 0 }, ["root Component"]],
           ],
         ],
+
+        "deijodij",
       ],
     ],
   },

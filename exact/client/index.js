@@ -52,43 +52,6 @@ export function render(fn, props, proxify) {
     return handleComponent(fn).el;
   }
 
-  const hooksContext = {
-    useBatch: new Set(),
-    // useWithdraw: null,
-    useState: {
-      repo: [],
-      currentNode: 0,
-    },
-    useDomRef: {
-      repo: [],
-      currentNode: 0,
-    },
-    useLayoutEffect: {
-      repo: [],
-      currentNode: 0,
-
-      // needToReRun: true,
-      // run: function run() {
-      //   this.needToReRun && this.fn !== null && this.fn();
-      //   this.needToReRun = false;
-      // },
-      // fn: null,
-      // deps: null,
-    },
-    useEffect: {
-      repo: [],
-      currentNode: 0,
-
-      // needToReRun: true,
-      // run: function run(dom) {
-      //   this.needToReRun && this.fn !== null && this.fn(dom);
-      //   this.needToReRun = false;
-      // },
-      // fn: null,
-      // deps: null,
-    },
-  };
-
   Boolean(proxify) && proxify(proxyFN);
 
   props =
@@ -97,18 +60,52 @@ export function render(fn, props, proxify) {
       return {};
     };
 
-  const component = function (isUpdating) {
-    Components.updating = isUpdating;
-    Hooks.reset(true, hooksContext, proxyFN);
-    var C = fn(props());
-    Hooks.reset(false);
-    Components.updating = false;
-    hooksContext.useState.node = 0;
-    hooksContext.useDomRef.refNode = 0;
-    if (C["#isComponent"] !== true)
-      throw JSON.stringify(fn) + " must return JSX component";
-    return C;
-  };
+  const hooksContext = {
+      useBatch: new Set(),
+      // useWithdraw: null,
+      useState: {
+        repo: [],
+        currentNode: 0,
+      },
+      useDomRef: {
+        repo: [],
+        currentNode: 0,
+      },
+      useLayoutEffect: {
+        repo: [],
+        currentNode: 0,
+
+        // needToReRun: true,
+        // run: function run() {
+        //   this.needToReRun && this.fn !== null && this.fn();
+        //   this.needToReRun = false;
+        // },
+        // fn: null,
+        // deps: null,
+      },
+      useEffect: {
+        repo: [],
+        currentNode: 0,
+
+        // needToReRun: true,
+        // run: function run(dom) {
+        //   this.needToReRun && this.fn !== null && this.fn(dom);
+        //   this.needToReRun = false;
+        // },
+        // fn: null,
+        // deps: null,
+      },
+    },
+    component = function (isUpdating) {
+      Components.updating = isUpdating;
+      Hooks.reset(true, hooksContext, proxyFN);
+      const C = fn(props());
+      Hooks.reset(false);
+      Components.updating = false;
+      if (C["#isComponent"] !== true)
+        throw JSON.stringify(fn) + " must return JSX component";
+      return C;
+    };
 
   let { _id, el, update, replace } = handleComponent(component(false));
 

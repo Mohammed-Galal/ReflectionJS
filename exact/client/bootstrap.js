@@ -1,5 +1,4 @@
 Node.prototype["#deps"] = [];
-let cout = 0;
 HTMLElement.prototype.adopt = function reCall(node) {
   const el = this;
   if (node instanceof Array) return node.forEach(reCall.bind(el));

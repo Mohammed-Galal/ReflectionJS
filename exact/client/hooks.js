@@ -8,6 +8,8 @@ export const Hooks = {
   reset(bool, $context, updater) {
     this.avail = bool;
     if (!bool) {
+      this.context.useState.currentNode = 0;
+      this.context.useDomRef.currentNode = 0;
       this.updateCurrentComponent = null;
       return (this.context = null);
     }
