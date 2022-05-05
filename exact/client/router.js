@@ -16,7 +16,7 @@ export default function handleCustomElements(tag, props, children) {
     case "Route":
       return renderRoute(props, children.map(handleNode));
     case "Link":
-      return renderLink(props, children.map(handleNode));
+      return renderLink(props, children);
     default:
       const TXT = new Text("");
       TXT["#deps"] = children.map(handleNode);
@@ -24,87 +24,12 @@ export default function handleCustomElements(tag, props, children) {
   }
 }
 
-let SwitchOn = false;
-function renderRoute(obj, children) {
-  let fallback = null,
-    el = null,
-    current;
-
-  const scripts = Components.context.scripts,
-    component = scripts[obj.component],
-    isExact = "exact:paths" in obj,
-    key = isExact ? "exact:paths" : "paths",
-    paths = typeof obj[key] === "number" ? scripts[obj[key]].current : obj[key];
-
-  let isActive = checkMatchedStr(paths, isExact);
-  if (component === undefined) {
-    fallback = children.map(DismatchedComment);
-
-    Listeners.add(function () {
-      isActive = checkMatchedStr(paths, isExact);
-      if (isActive) {
-        if (current === children) return;
-        current.forEach(($, ind) => $.replace(children[ind]));
-        current = children;
-      } else {
-        if (current === fallback) return;
-        current.forEach(($, ind) => $.replace(fallback[ind]));
-        current = fallback;
-      }
-    });
-
-    current = isActive ? children : fallback;
-  } else {
-    const props = {
-      targetedRoutes: { paths, isExact },
-      Children: {
-        "#isComponent": false,
-        "#isChild": true,
-        dom: children,
-      },
-    };
-
-    fallback = DismatchedComment();
-
-    if (isActive) {
-      props.location = new URL(document.location);
-      props.location.params = isActive.groups;
-      el = render(component.current, function () {
-        return props;
-      });
-    }
-
-    Listeners.add(function () {
-      isActive = checkMatchedStr(paths, isExact);
-      if (isActive) {
-        if (current === el) return;
-        props.location = new URL(document.location);
-        props.location.params = isActive.groups;
-        el === null &&
-          (el = render(component.current, function () {
-            return props;
-          }));
-        current.replace(el);
-        current = el;
-      } else {
-        if (current === fallback) return;
-        current.replace(fallback);
-        current = fallback;
-      }
-    });
-
-    current = el || fallback;
-  }
-
-  return SwitchOn ? { "#isRoute": true, isActive, current } : current;
-}
-
 function renderLink(obj, children) {
-  const el = handleElement(["a", obj, []]),
+  const el = handleElement(["a", obj, children]),
     href = () => el.getAttribute("href"),
     title = () => el.title || document.title;
 
-  el.adopt(children).addEventListener("click", function (e) {
+  el.addEventListener("click", function (e) {
     e.preventDefault();
     const link = href();
     if (link === document.location.pathname) return;
@@ -128,13 +53,104 @@ function renderLink(obj, children) {
   return el;
 }
 
-const Routes = new Map();
-export function renderSwitch(children) {
+let SwitchOn = false;
+function renderRoute(obj, children) {
   const placeHolder = new Text("");
 
+  const scripts = Components.context.scripts,
+    component = scripts[obj.component],
+    isExact = "exact:paths" in obj,
+    key = isExact ? "exact:paths" : "paths",
+    paths = typeof obj[key] === "number" ? scripts[obj[key]].current : obj[key];
+
+  let isActive = checkMatchedStr(paths, isExact);
+  if (component === undefined) {
+    isActive && (placeHolder["#deps"] = children);
+
+    Listeners.add(function () {
+      isActive = checkMatchedStr(paths, isExact);
+      if (isActive) {
+        placeHolder["#deps"].forEach(($) => placeHolder.before($));
+        placeHolder["#deps"] = children;
+      } else {
+        placeHolder["#deps"].forEach(($) => $.remove());
+        placeHolder["#deps"] = [];
+      }
+    });
+  } else {
+    const props = {
+      targetedRoutes: { paths, isExact },
+      Children: {
+        "#isComponent": false,
+        "#isChild": true,
+        dom: children,
+      },
+    };
+
+    let cachedEL = null;
+    if (isActive) {
+      props.location = new URL(document.location);
+      props.location.params = isActive.groups;
+      cachedEL = render(component.current, function () {
+        return props;
+      });
+      placeHolder["#deps"] = [cachedEL];
+    }
+
+    Listeners.add(function () {
+      isActive = checkMatchedStr(paths, isExact);
+      if (isActive) {
+        props.location = new URL(document.location);
+        props.location.params = isActive.groups;
+
+        cachedEL === null &&
+          (cachedEL = render(component.current, function () {
+            return props;
+          }));
+        placeHolder.before(cachedEL);
+        placeHolder["#deps"] = [cachedEL];
+      } else {
+        placeHolder["#deps"][0].remove();
+        placeHolder["#deps"] = [];
+      }
+    });
+  }
+
+  return SwitchOn
+    ? {
+        get isActive() {
+          return isActive;
+        },
+        get current() {
+          return current;
+        },
+      }
+    : placeHolder;
+}
+
+function renderSwitch($children) {
+  const fallback = new Text("");
+  let currentRoute = fallback;
+
   SwitchOn = true;
-  placeHolder["#deps"] = children.map(handleNode);
+  const children = $children
+    .map(handleNode)
+    .filter(($) => !($ instanceof Node));
   SwitchOn = false;
 
-  return placeHolder["#deps"];
+  let result = children.find((el) => el.isActive);
+  if (result) currentRoute = result.current;
+
+  Listeners.add(function () {
+    result = children.find((el) => el.isActive);
+    if (result) {
+      console.log(currentRoute.replace(result.current));
+      currentRoute = result.current;
+      return;
+    }
+    currentRoute.replace(fallback);
+    currentRoute = fallback;
+  });
+
+  return currentRoute;
 }

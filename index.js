@@ -24,18 +24,12 @@ const listOfComponents = [
     _id: 3,
     scripts: [],
     components: [],
-    dom: [
-      "Link",
-      { href: "/index.html", title: "index page" },
-      [["", {}, ["index.html"]]],
-    ],
+    dom: ["Link", { href: "/index.html", title: "index page" }, ["index.html"]],
   },
 ];
 
 function App(props) {
   const [txt, setTxt] = useState(true);
-
-  console.log(props);
 
   return {
     "#isComponent": true,
@@ -57,10 +51,10 @@ render(
       {},
       [
         1,
+        ["Route", { paths: "/", component: 0 }, ["root Component"]],
         [
           "Route",
           { "exact:paths": "/:index", component: 0 },
-          // { paths: "/index.html" },
           ["im a Child", "poipo", "kpokpo"],
         ],
       ],

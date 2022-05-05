@@ -1,10 +1,10 @@
 Node.prototype["#deps"] = [];
-HTMLElement.prototype.adopt = function (node) {
-  if (node instanceof Array) node.forEach(this.adopt.bind(this));
-  else {
-    this.appendChild(node);
-    node["#deps"].forEach(this.adopt.bind(this));
-  }
+let cout = 0;
+HTMLElement.prototype.adopt = function reCall(node) {
+  const el = this;
+  if (node instanceof Array) return node.forEach(reCall.bind(el));
+  el.appendChild(node);
+  node["#deps"].forEach(reCall.bind(el));
   return this;
 };
 

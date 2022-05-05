@@ -1,0 +1,3 @@
+Node.before
+
+Array [map, forEach, find]

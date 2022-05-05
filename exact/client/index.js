@@ -45,9 +45,17 @@ export var Components = {
   },
 };
 
-const cachedDomByKeys = new Map();
 export function render(fn, props, proxify) {
-  let hooksContext = {
+  if (typeof fn !== "function") {
+    if (fn["#isComponent"] !== true) {
+      if (fn["#isChild"]) return fn.dom;
+      throw fn + " must return JSX component";
+    }
+
+    return handleComponent(fn);
+  }
+
+  const hooksContext = {
     useBatch: new Set(),
     useWithdraw: null,
     useState: {
@@ -78,83 +86,49 @@ export function render(fn, props, proxify) {
     },
   };
 
-  var component = function component() {
-    return fn;
+  Boolean(proxify) && proxify(proxyFN);
+
+  props =
+    props ||
+    function () {
+      return {};
+    };
+
+  const component = function (isUpdating) {
+    Components.updating = isUpdating;
+    Hooks.reset(true, hooksContext, proxyFN);
+    var C = fn(props());
+    Hooks.reset(false);
+    Components.updating = false;
+    hooksContext.useState.node = 0;
+    hooksContext.useDomRef.refNode = 0;
+    if (C["#isComponent"] !== true) throw fn + " must return JSX component";
+    return C;
   };
 
-  if (typeof fn === "function") {
-    Boolean(proxify) && proxify(proxyFN);
+  let { _id, el, update, replace } = handleComponent(component(false));
 
-    props =
-      props ||
-      function () {
-        return {};
-      };
-
-    component = function component(isUpdating) {
-      Components.updating = isUpdating;
-      Hooks.reset(true, hooksContext, proxyFN);
-      var C = fn(props());
-      Hooks.reset(false);
-      Components.updating = false;
-      hooksContext.useState.node = 0;
-      hooksContext.useDomRef.refNode = 0;
-      return C;
-    };
-  }
-
-  var result = component(false);
-  try {
-    if (result["#isComponent"] !== true) {
-      hooksContext = null;
-      if (result["#isChild"]) return result.dom;
-      throw fn + " must return JSX component";
-    }
-  } catch {
-    hooksContext = null;
-    return;
-  }
-
-  var VALUE;
-  var key = result.dom[1].key;
-
-  if (key !== undefined) {
-    var getCached = cachedDomByKeys.get("" + key);
-    if (getCached !== undefined) return getCached.el;
-    VALUE = handleComponent(result, proxyFN);
-    cachedDomByKeys.set("" + key, VALUE);
-  } else VALUE = handleComponent(result, proxyFN);
-
-  return VALUE.el;
+  return el;
 
   function proxyFN() {
-    VALUE.el = null;
-    var newResult = component(true);
-    VALUE._id === newResult._id
-      ? VALUE.update(newResult.scripts)
-      : (VALUE._id = VALUE.replace(newResult));
+    const result = component(true);
+    if (_id === result._id) return update(result.scripts);
+    _id = replace(result);
   }
 }
 
-function handleComponent(_ref) {
-  var _id = _ref._id,
-    components = _ref.components,
-    scripts = _ref.scripts,
-    dom = _ref.dom;
-  var cachedContexts = new Map(),
+function handleComponent({ _id, scripts, components, dom }) {
+  const cachedContexts = new Map(),
     context = {
       scripts: scripts.map(scriptify),
       components: components,
     };
+
   Components.addContext(context);
   context.el = handleElement(dom);
   Components.popContext();
-  cachedContexts.set("" + _id, context);
-  {
-    dom = null;
-    components = null;
-    scripts = null;
-  }
+  cachedContexts.set(String(_id), context);
+
   return {
     _id: _id,
     el: context.el,
@@ -179,24 +153,24 @@ function handleComponent(_ref) {
   }
 
   function replace(newObj) {
-    var getCached = cachedContexts.get("" + newObj._id);
+    const getCached = cachedContexts.get(String(newObj._id));
 
     if (getCached !== undefined) {
-      context.el.replaceWith(getCached.el);
-      _id = newObj._id;
       context.scripts = getCached.scripts;
       context.components = getCached.components;
+      context.el.replaceWith(getCached.el);
       context.el = getCached.el;
     } else {
-      _id = newObj._id;
       context.scripts = newObj.scripts.map(scriptify);
       context.components = newObj.components;
-      Components.context = context;
-      var el = renderDOM(newObj.dom);
-      Components.context = null;
+      //
+      Components.addContext(context);
+      const el = handleElement(newObj.dom);
+      Components.popContext();
+      //
       context.el.replaceWith(el);
       context.el = el;
-      cachedContexts.set("" + _id, context);
+      cachedContexts.set(String(newObj._id), context);
     }
 
     update(newObj.scripts);
@@ -204,20 +178,40 @@ function handleComponent(_ref) {
   }
 }
 
-export function handleElement(element) {
+const cachedDomByKeys = new Map();
+export function handleElement([tag, props, children]) {
+  const propsKeys = Object.keys(props),
+    elementHasKey = propsKeys.some((p) => p === "key");
+
+  if (elementHasKey) {
+    const getCached = cachedDomByKeys.get(p);
+    if (getCached !== undefined) return getCached;
+  }
+
   const scripts = Components.context.scripts,
     components = Components.context.components;
 
-  const tag = element[0],
-    props = element[1];
+  if (isCustomTag(tag)) {
+    const result = handleCustomElements(tag, props, children);
 
-  if (isCustomTag(tag)) return handleCustomElements(tag, props, element[2]);
+    if (elementHasKey) {
+      const K =
+        typeof props["key"] === "number"
+          ? scripts[props.keys].current
+          : props["key"];
 
-  const children = element[2].map(handleNode);
+      cachedDomByKeys.set(K, result);
+    }
+
+    return result;
+  }
+
+  children = children.map(handleNode);
+
   if (typeof tag === "number") {
     const dynamicProps = {};
 
-    Object.keys(props).forEach(
+    propsKeys.forEach(
       (prop) =>
         typeof props[prop] === "number" && (dynamicProps[prop] = props[prop])
     );
@@ -228,18 +222,28 @@ export function handleElement(element) {
       dom: children,
     };
 
-    const keys = Object.keys(dynamicProps);
+    const keys = Object.keys(dynamicProps),
+      result = render(
+        components[tag],
+        function () {
+          keys.forEach((key) => (props[key] = scripts[keys[key]].current));
+          return props;
+        },
+        function (PR) {
+          keys.forEach(($) => scripts[dynamicProps[$]].deps.push(PR));
+        }
+      );
 
-    return render(
-      components[tag],
-      function () {
-        keys.forEach((key) => (props[key] = scripts[keys[key]].current));
-        return props;
-      },
-      function (PR) {
-        keys.forEach(($) => scripts[dynamicProps[$]].deps.push(PR));
-      }
-    );
+    if (elementHasKey) {
+      const K =
+        typeof props["key"] === "number"
+          ? scripts[props.keys].current
+          : props["key"];
+
+      cachedDomByKeys.set(K, result);
+    }
+
+    return result;
   }
 
   const el = document.createElement(tag);
@@ -269,7 +273,16 @@ export function handleElement(element) {
     el[attrName] = encodeHTML(attrVal);
   });
 
-  el.adopt(children);
+  children.forEach(($) => el.adopt($));
+
+  if (elementHasKey) {
+    const K =
+      typeof props["key"] === "number"
+        ? scripts[props.keys].current
+        : props["key"];
+
+    cachedDomByKeys.set(K, el);
+  }
 
   return el;
 }
@@ -302,21 +315,23 @@ export function handleNode(node) {
 }
 
 function renderLoop(arrOfEls) {
-  const TXT = new Text("");
-  TXT["#deps"] = arrOfEls.map(render);
-  const children = TXT["#deps"];
+  const placeHolder = new Text("");
+
+  let children = arrOfEls.map(handleComponent);
+
+  placeHolder["#deps"] = children;
 
   function cleanUp(startPos, endPos) {
     while (startPos <= endPos) {
-      children[startPos]["#deps"].forEach(($) => $.remove());
-      children[startPos].remove();
-      children[startPos] = undefined;
+      placeHolder["#deps"][startPos]["#deps"].forEach(($) => $.remove());
+      placeHolder["#deps"][startPos].remove();
+      placeHolder["#deps"][startPos] = undefined;
       startPos++;
     }
   }
 
   return {
-    dom: TXT,
+    dom: placeHolder,
     update: function () {
       let currentIndex = 0;
       TXT["#deps"] = arrOfEls.map(render);
