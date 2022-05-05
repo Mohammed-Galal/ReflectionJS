@@ -1,13 +1,13 @@
 import { Components } from "./index.js";
 
 export const Hooks = {
+  useBatchOn: false,
   updateCurrentComponent: null,
   avail: false,
   context: null,
   reset(bool, $context, updater) {
     this.avail = bool;
     if (!bool) {
-      // if bool === false
       this.updateCurrentComponent = null;
       return (this.context = null);
     }
@@ -21,19 +21,22 @@ export function useState(initState) {
 
   const targetedComponent = Hooks.context,
     update = Hooks.updateCurrentComponent,
-    states = targetedComponent.useState.arr,
-    stateNode = targetedComponent.node;
-  targetedComponent.useState.node++;
+    states = targetedComponent.useState.repo,
+    stateNode = targetedComponent.currentNode;
 
-  Components.updating
-    ? (initState = states[stateNode])
-    : (states[stateNode] = initState);
+  targetedComponent.useState.currentNode++;
+
+  if (Components.updating) {
+    if (stateNode > states.length)
+      throw "hooks cannot get invoked inside of loops or conditions";
+    initState = states[stateNode];
+  } else states[stateNode] = initState;
 
   return [
     initState,
     function (newVal) {
       if (newVal === initState) return false;
-      targetedComponent.useState.arr[stateNode] = newVal;
+      targetedComponent.useState.repo[stateNode] = newVal;
       if (!Hooks.useBatchOn) return update();
       targetedComponent.useBatch.add(update);
     },

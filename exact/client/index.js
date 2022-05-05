@@ -24,14 +24,11 @@ function _typeof(obj) {
 }
 
 export default function (root, el) {
-  if (typeof root === "function")
-    throw "the root Component must not be a function";
-  if (!root["#isComponent"]) return "the root element is not a JSX Component";
-
   return document.querySelector(el).adopt(render(root));
 }
 
-export var Components = {
+export const Components = {
+  needToreRender: new Set(),
   updating: false,
   currentActive: [],
   get context() {
@@ -49,7 +46,7 @@ export function render(fn, props, proxify) {
   if (typeof fn !== "function") {
     if (fn["#isComponent"] !== true) {
       if (fn["#isChild"]) return fn.dom;
-      throw fn + " must return JSX component";
+      throw JSON.stringify(fn) + " must return JSX component";
     }
 
     return handleComponent(fn).el;
@@ -57,32 +54,38 @@ export function render(fn, props, proxify) {
 
   const hooksContext = {
     useBatch: new Set(),
-    useWithdraw: null,
+    // useWithdraw: null,
     useState: {
-      arr: [],
-      node: 0,
+      repo: [],
+      currentNode: 0,
     },
     useDomRef: {
-      refs: [],
-      refNode: 0,
+      repo: [],
+      currentNode: 0,
     },
     useLayoutEffect: {
-      needToReRun: true,
-      run: function run() {
-        this.needToReRun && this.fn !== null && this.fn();
-        this.needToReRun = false;
-      },
-      fn: null,
-      deps: null,
+      repo: [],
+      currentNode: 0,
+
+      // needToReRun: true,
+      // run: function run() {
+      //   this.needToReRun && this.fn !== null && this.fn();
+      //   this.needToReRun = false;
+      // },
+      // fn: null,
+      // deps: null,
     },
     useEffect: {
-      needToReRun: true,
-      run: function run(dom) {
-        this.needToReRun && this.fn !== null && this.fn(dom);
-        this.needToReRun = false;
-      },
-      fn: null,
-      deps: null,
+      repo: [],
+      currentNode: 0,
+
+      // needToReRun: true,
+      // run: function run(dom) {
+      //   this.needToReRun && this.fn !== null && this.fn(dom);
+      //   this.needToReRun = false;
+      // },
+      // fn: null,
+      // deps: null,
     },
   };
 
@@ -102,7 +105,8 @@ export function render(fn, props, proxify) {
     Components.updating = false;
     hooksContext.useState.node = 0;
     hooksContext.useDomRef.refNode = 0;
-    if (C["#isComponent"] !== true) throw fn + " must return JSX component";
+    if (C["#isComponent"] !== true)
+      throw JSON.stringify(fn) + " must return JSX component";
     return C;
   };
 
@@ -112,8 +116,11 @@ export function render(fn, props, proxify) {
 
   function proxyFN() {
     const result = component(true);
-    if (_id === result._id) return update(result.scripts);
-    _id = replace(result);
+    if (_id === result._id) update(result.scripts);
+    else _id = replace(result);
+
+    Components.needToreRender.forEach(($) => $());
+    Components.needToreRender.clear();
   }
 }
 
@@ -227,7 +234,11 @@ export function handleElement([tag, props, children]) {
           return props;
         },
         function (PR) {
-          keys.forEach(($) => scripts[dynamicProps[$]].deps.push(PR));
+          keys.forEach(($) => {
+            scripts[dynamicProps[$]].deps.push(function () {
+              Components.needToreRender.add(PR);
+            });
+          });
         }
       );
 
@@ -237,11 +248,12 @@ export function handleElement([tag, props, children]) {
 
   const el = document.createElement(tag);
 
-  Object.keys(props).forEach(function ($) {
+  propsKeys.forEach(function ($) {
     var attrName = $,
       attrVal = props[$];
-    if (attrName === "class") return (attrName = "className");
-    else if (attrName === "key") return;
+
+    if (attrName === "key") return;
+    else if (attrName === "class") return (attrName = "className");
     else if (typeof attrVal === "number") {
       if (/^on[A-Z]/.exec(attrName)) {
         attrName = attrName.toLowerCase().slice(2);
@@ -321,6 +333,7 @@ function renderLoop(arrOfEls) {
         return result;
       });
 
+      placeHolder["#deps"] = children;
       cleanUp(children.length, placeHolder["#deps"].length);
     },
   };
