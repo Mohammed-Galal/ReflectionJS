@@ -10,20 +10,18 @@ HTMLElement.prototype.adopt = function reCall(node) {
 
 Node.prototype.replace = function (newNode) {
   if (this === newNode) return newNode;
-  if (newNode instanceof Array) newNode.forEach(this.replace.bind(this));
-  else {
-    this["#deps"].forEach(function reCall($) {
-      newNode.remove($);
-      $["#deps"].forEach(reCall);
-    });
+  // if (newNode instanceof Array) newNode.forEach(this.replace.bind(this));
+  // else {
+  this["#deps"].forEach(function ($) {
+    $.deepRemove();
+  });
 
-    const parent = this.parentElement;
-    this.replaceWith(newNode);
-    newNode["#deps"].forEach(function reCall($) {
-      parent.insertBefore(newNode, $);
-      $["#deps"].forEach(reCall);
-    });
-  }
+  this.replaceWith(newNode);
+  newNode["#deps"].forEach(function reCall($) {
+    newNode.before($);
+    $["#deps"].forEach(reCall);
+  });
+  // }
   return newNode;
 };
 

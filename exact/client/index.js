@@ -183,8 +183,14 @@ export function handleElement([tag, props, children]) {
   const propsKeys = Object.keys(props),
     elementHasKey = propsKeys.some((p) => p === "key");
 
+  let K;
   if (elementHasKey) {
-    const getCached = cachedDomByKeys.get(p);
+    K =
+      typeof props["key"] === "number"
+        ? scripts[props.keys].current
+        : props["key"];
+
+    const getCached = cachedDomByKeys.get(K);
     if (getCached !== undefined) return getCached;
   }
 
@@ -193,16 +199,7 @@ export function handleElement([tag, props, children]) {
 
   if (isCustomTag(tag)) {
     const result = handleCustomElements(tag, props, children);
-
-    if (elementHasKey) {
-      const K =
-        typeof props["key"] === "number"
-          ? scripts[props.keys].current
-          : props["key"];
-
-      cachedDomByKeys.set(K, result);
-    }
-
+    if (elementHasKey) cachedDomByKeys.set(K, result);
     return result;
   }
 
@@ -234,15 +231,7 @@ export function handleElement([tag, props, children]) {
         }
       );
 
-    if (elementHasKey) {
-      const K =
-        typeof props["key"] === "number"
-          ? scripts[props.keys].current
-          : props["key"];
-
-      cachedDomByKeys.set(K, result);
-    }
-
+    if (elementHasKey) cachedDomByKeys.set(K, result);
     return result;
   }
 
@@ -273,17 +262,8 @@ export function handleElement([tag, props, children]) {
     el[attrName] = encodeHTML(attrVal);
   });
 
-  children.forEach(($) => el.adopt($));
-
-  if (elementHasKey) {
-    const K =
-      typeof props["key"] === "number"
-        ? scripts[props.keys].current
-        : props["key"];
-
-    cachedDomByKeys.set(K, el);
-  }
-
+  el.adopt(children);
+  if (elementHasKey) cachedDomByKeys.set(K, el);
   return el;
 }
 

@@ -4,15 +4,13 @@ import { useState } from "./exact/client/hooks.js";
 const listOfComponents = [
   {
     "#isComponent": true,
-    key: "One",
     _id: 3,
     scripts: [],
     components: [],
-    dom: ["Link", { href: "/index" }, ["One"]],
+    dom: ["Link", { href: "/", key: "Root" }, ["Root"]],
   },
   {
     "#isComponent": true,
-    key: "Two",
     _id: 3,
     scripts: [],
     components: [],
@@ -20,7 +18,6 @@ const listOfComponents = [
   },
   {
     "#isComponent": true,
-    key: "Three",
     _id: 3,
     scripts: [],
     components: [],
