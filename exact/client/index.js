@@ -28,7 +28,7 @@ export default function (root, el) {
     throw "the root Component must not be a function";
   if (!root["#isComponent"]) return "the root element is not a JSX Component";
 
-  return document.getElementById(el).adopt(render(root));
+  return document.querySelector(el).adopt(render(root));
 }
 
 export var Components = {
@@ -52,7 +52,7 @@ export function render(fn, props, proxify) {
       throw fn + " must return JSX component";
     }
 
-    return handleComponent(fn);
+    return handleComponent(fn).el;
   }
 
   const hooksContext = {
@@ -317,14 +317,12 @@ export function handleNode(node) {
 function renderLoop(arrOfEls) {
   const placeHolder = new Text("");
 
-  let children = arrOfEls.map(handleComponent);
-
+  let children = arrOfEls.map(($) => handleComponent($).el);
   placeHolder["#deps"] = children;
 
   function cleanUp(startPos, endPos) {
     while (startPos <= endPos) {
-      placeHolder["#deps"][startPos]["#deps"].forEach(($) => $.remove());
-      placeHolder["#deps"][startPos].remove();
+      placeHolder["#deps"][startPos].deepRemove();
       placeHolder["#deps"][startPos] = undefined;
       startPos++;
     }
@@ -333,21 +331,17 @@ function renderLoop(arrOfEls) {
   return {
     dom: placeHolder,
     update: function () {
-      let currentIndex = 0;
-      TXT["#deps"] = arrOfEls.map(render);
+      children = arrOfEls.map((C, ind) => {
+        const result = arrOfEls.map(($) => handleComponent($).el);
 
-      children.forEach((C, ind) => {
-        children[ind] !== undefined
-          ? children[ind].replace(C)
-          : children.length === 0
-          ? TXT.insertBefore(C)
-          : children[ind].after(C);
+        if (children[ind] === undefined) placeHolder.before(result);
+        else children[ind].replace(result);
 
-        children[ind] = C;
-        current = ind;
+        currentIndex = ind;
+        return result;
       });
 
-      cleanUp(currentIndex + 1, children.length);
+      cleanUp(children.length, placeHolder["#deps"].length);
     },
   };
 }

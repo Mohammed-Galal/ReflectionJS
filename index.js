@@ -60,5 +60,5 @@ render(
       ],
     ],
   },
-  "root"
+  "#root"
 );

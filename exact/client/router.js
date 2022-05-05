@@ -4,8 +4,7 @@ import { Components, render, handleElement, handleNode } from "./index.js";
 const Listeners = new Set(),
   updateRoutes = function () {
     Listeners.forEach(($) => $());
-  },
-  DismatchedComment = () => new Text("");
+  };
 
 window.addEventListener("popstate", updateRoutes);
 
@@ -144,12 +143,10 @@ function renderSwitch($children) {
   Listeners.add(function () {
     result = children.find((el) => el.isActive);
     if (result) {
-      console.log(currentRoute.replace(result.current));
+      currentRoute.replace(fallback);
       currentRoute = result.current;
       return;
     }
-    currentRoute.replace(fallback);
-    currentRoute = fallback;
   });
 
   return currentRoute;

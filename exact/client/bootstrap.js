@@ -26,3 +26,8 @@ Node.prototype.replace = function (newNode) {
   }
   return newNode;
 };
+
+Node.prototype.deepRemove = function () {
+  this["#deps"].forEach(($) => $.deepRemove());
+  this.remove();
+};
