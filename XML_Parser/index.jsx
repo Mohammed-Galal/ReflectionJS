@@ -3,8 +3,13 @@ export default function () {
     [y, setY] = useServerState("user");
   return (
     <>
-      <img />
-      hello {y.name}, your Id is {x}
+      <Switch>
+        <Route paths={"/"} />
+        hello {y.name}, your Id is{" "}
+        {x.map(($) => {
+          return <Div>hello {x}</Div>;
+        })}
+      </Switch>
     </>
   );
 }

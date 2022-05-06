@@ -1,67 +1,63 @@
-import handleNewEl from "./handleNewElement.js";
-import parseStrings from "./parseStrings.js";
-// const handleNewEl = require("./handleNewElement"),
-//   parseStrings = require("./parseStrings");
+const handleNewEl = require("./handleNewElement"),
+  parseStrings = require("./parseStrings");
 
 const rootElementCatcher = /<(?<name>(\w+)?)[^]+?<\/(\k<name>)>|<\S[^]+\/>/g,
   scriptsCatcher = /(?={)|(?=})|(?<=})/g,
   splitExp = /<(?=\/)|(?=<)|(?<!\/)>|\s*(?=\/>)|(?<=\/>)/g;
 
 let key = 0;
-// module.exports = function (txt) {
-export default function (txt) {
-  return (
-    txt
-      // .replace(/<>|<\/>/g, (m) => (m === "<>" ? "<fragment>" : "</fragment>"))
-      .replace(rootElementCatcher, parser)
-  );
+module.exports = I;
 
-  function parser(match, obj) {
-    const currentDOMKey = key;
-    key++;
+function I(txt) {
+  // .replace(/<>|<\/>/g, (m) => (m === "<>" ? "<fragment>" : "</fragment>"))
+  return txt.replace(rootElementCatcher, parser);
+}
 
-    let scripts = obj.scripts || [],
-      components = obj.components || [];
+function parser(match) {
+  const currentDOMKey = key;
+  key++;
 
-    match = extractScript(scripts, match);
+  let scripts = [],
+    components = [];
 
-    const domArray = match.split(splitExp).filter(Boolean),
-      DOMResult = [];
+  match = extractScript(scripts, match);
 
-    domArray.forEach(($) => {
-      if ($[0] === "<") {
-        const sliced = $.slice(1).split(/\s+(?=\S+=["'{])/),
-          EL = handleNewEl(sliced, components);
-        return DOMResult.unshift(EL);
-      } else if ($[0] === "/") {
-        // console.log($ === "/>", DOMResult[0][1]);
-        try {
-          DOMResult[1][2].push(DOMResult[0]);
-          return DOMResult.shift();
-        } catch {
-          return;
-        }
-      } else {
-        $ = parseStrings($);
-        if ($.length === 1) return DOMResult[0][2].push($[0]);
-        $.forEach(($i) => DOMResult[0][2].push($i));
+  const domArray = match.split(splitExp).filter(Boolean),
+    DOMResult = [];
+
+  domArray.forEach(($) => {
+    if ($[0] === "<") {
+      const sliced = $.slice(1).split(/\s+(?=\S+=["'{])/),
+        EL = handleNewEl(sliced, components);
+      return DOMResult.unshift(EL);
+    } else if ($[0] === "/") {
+      // console.log($ === "/>", DOMResult[0][1]);
+      try {
+        DOMResult[1][2].push(DOMResult[0]);
+        return DOMResult.shift();
+      } catch {
+        return;
       }
-    });
+    } else {
+      $ = parseStrings($);
+      if ($.length === 1) return DOMResult[0][2].push($[0]);
+      $.forEach(($i) => DOMResult[0][2].push($i));
+    }
+  });
 
-    return (
-      '{"#isComponent":true,key:' +
-      currentDOMKey +
-      ",scripts:[" +
-      scripts +
-      "]" +
-      ",components:[" +
-      components +
-      "]" +
-      ",dom:" +
-      JSON.stringify(DOMResult[0]) +
-      "}"
-    );
-  }
+  return (
+    '{"#isComponent":true,key:' +
+    currentDOMKey +
+    ",scripts:[" +
+    scripts.map(I) +
+    "]" +
+    ",components:[" +
+    components +
+    "]" +
+    ",dom:" +
+    JSON.stringify(DOMResult[0]) +
+    "}"
+  );
 }
 
 let holder = "",
