@@ -14,14 +14,18 @@ const listOfComponents = [
     _id: 3,
     scripts: [],
     components: [],
-    dom: ["Link", { href: "/about/dd" }, ["Two"]],
+    dom: ["Link", { href: "/about/dd", key: "Two" }, ["Two"]],
   },
   {
     "#isComponent": true,
     _id: 3,
     scripts: [],
     components: [],
-    dom: ["Link", { href: "/index.html", title: "index page" }, ["index.html"]],
+    dom: [
+      "Link",
+      { href: "/index.html", key: "index page", title: "index page" },
+      ["index.html"],
+    ],
   },
 ];
 
@@ -37,14 +41,14 @@ function App(props) {
   };
 }
 
-render(
-  {
+render(() => {
+  return {
     "#isComponent": true,
     _id: 0,
     components: [],
     scripts: [App, listOfComponents],
     dom: [
-      "",
+      "main",
       {},
       [
         1,
@@ -64,6 +68,5 @@ render(
         "deijodij",
       ],
     ],
-  },
-  "#root"
-);
+  };
+}, "#root");

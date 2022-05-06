@@ -305,33 +305,29 @@ export function handleNode(node) {
 
 function renderLoop(arrOfEls) {
   const placeHolder = new Text("");
-
-  let children = arrOfEls.map(($) => handleComponent($).el);
-  placeHolder["#deps"] = children;
-
-  function cleanUp(startPos, endPos) {
-    while (startPos <= endPos) {
-      placeHolder["#deps"][startPos].deepRemove();
-      placeHolder["#deps"][startPos] = undefined;
-      startPos++;
-    }
-  }
+  placeHolder["#deps"] = arrOfEls.map(($) => handleComponent($).el);
 
   return {
     dom: placeHolder,
     update: function () {
-      children = arrOfEls.map((C, ind) => {
-        const result = arrOfEls.map(($) => handleComponent($).el);
+      const oldList = placeHolder["#deps"],
+        newList = arrOfEls.map((C) => handleComponent(C).el);
 
-        if (children[ind] === undefined) placeHolder.before(result);
-        else children[ind].replace(result);
+      const oldLen = oldList.length,
+        newLen = newList.length,
+        endPos = oldLen > newLen ? oldLen : newLen;
 
-        currentIndex = ind;
-        return result;
-      });
+      let index = 0;
+      while (index < endPos) {
+        const oldC = oldList[index],
+          newC = newList[index];
+        if (oldC === undefined) placeHolder.before(newC);
+        else if (newC === undefined) oldC.deepRemove();
+        else oldC.replace(newC);
+        index++;
+      }
 
-      placeHolder["#deps"] = children;
-      cleanUp(children.length, placeHolder["#deps"].length);
+      placeHolder["#deps"] = newList;
     },
   };
 }
