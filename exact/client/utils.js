@@ -1,7 +1,7 @@
 function replacer(str) {
   return String(str).replace(
     /:(?<param>\w+)/g,
-    (m) => "(?<" + m.slice(1) + ">\\w+)(\\.\\w+)*"
+    (m) => "(?<" + m.slice(1) + ">\\w+)"
   );
 }
 export const checkMatchedStr = function ($str, isExact) {

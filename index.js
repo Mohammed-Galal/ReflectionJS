@@ -32,6 +32,7 @@ const listOfComponents = [
 function App(props) {
   const [txt, setTxt] = useState(true);
 
+  console.log(props);
   return {
     "#isComponent": true,
     _id: 1,
@@ -71,7 +72,7 @@ render(() => {
           [
             [
               "Route",
-              { "exact:paths": "/about/:d", component: 0 },
+              { "exact:paths": "/:index.html", component: 0 },
               ["im a Child "],
             ],
             ["Route", { "exact:paths": "/" }, ["root Component"]],

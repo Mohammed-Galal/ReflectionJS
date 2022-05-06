@@ -90,7 +90,7 @@ function renderRoute(obj, children) {
       targetedRoutes: { paths, isExact },
       get location() {
         const LOC = new URL(document.location);
-        LOC.params = isActive.groups;
+        LOC.params = checkMatchedStr(paths, isExact).groups;
         return LOC;
       },
       Children: {
@@ -101,7 +101,7 @@ function renderRoute(obj, children) {
     };
 
     let cachedEL = null;
-    if (SwitchOn || isActive) {
+    if (isActive) {
       cachedEL = render(component.current, function () {
         return props;
       });
@@ -115,6 +115,13 @@ function renderRoute(obj, children) {
           return checkMatchedStr(paths, isExact);
         },
         get current() {
+          if (cachedEL === null) {
+            cachedEL = render(component.current, function () {
+              return props;
+            });
+            placeHolder["#deps"] = [cachedEL];
+          }
+
           return cachedEL;
         },
       };
