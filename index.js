@@ -42,6 +42,19 @@ function App(props) {
 }
 
 render(() => {
+  const [x, y] = useState(true);
+
+  // setTimeout(() => {
+  //   listOfComponents.push({
+  //     "#isComponent": true,
+  //     _id: 3,
+  //     scripts: [],
+  //     components: [],
+  //     dom: ["Link", { href: "/about/dd", key: "Two" }, ["Two"]],
+  //   });
+  //   y(!x);
+  // }, 2000);
+
   return {
     "#isComponent": true,
     _id: 0,
@@ -59,9 +72,9 @@ render(() => {
             [
               "Route",
               { "exact:paths": "/about/:d", component: 0 },
-              ["im a Child", "poipo", "kpokpo"],
+              ["im a Child "],
             ],
-            ["Route", { "exact:paths": "/", component: 0 }, ["root Component"]],
+            ["Route", { "exact:paths": "/" }, ["root Component"]],
           ],
         ],
 

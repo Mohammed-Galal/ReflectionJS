@@ -54,7 +54,7 @@ function renderLink(obj, children) {
 
 let SwitchOn = false;
 function renderRoute(obj, children) {
-  const placeHolder = new Text("");
+  const placeHolder = new Text();
 
   const scripts = Components.context.scripts,
     component = scripts[obj.component],
@@ -64,21 +64,35 @@ function renderRoute(obj, children) {
 
   let isActive = checkMatchedStr(paths, isExact);
   if (component === undefined) {
-    isActive && (placeHolder["#deps"] = children);
+    if (SwitchOn || isActive) placeHolder["#deps"] = children;
 
-    Listeners.add(function () {
-      isActive = checkMatchedStr(paths, isExact);
-      if (isActive) {
-        placeHolder["#deps"].forEach(($) => placeHolder.before($));
-        placeHolder["#deps"] = children;
-      } else {
-        placeHolder["#deps"].forEach(($) => $.remove());
-        placeHolder["#deps"] = [];
-      }
-    });
+    if (SwitchOn)
+      return {
+        get isActive() {
+          return checkMatchedStr(paths, isExact);
+        },
+        current: placeHolder,
+      };
+
+    !SwitchOn &&
+      Listeners.add(function () {
+        isActive = checkMatchedStr(paths, isExact);
+        if (isActive) {
+          placeHolder["#deps"].forEach(($) => placeHolder.spreadBefore($));
+          placeHolder["#deps"] = children;
+        } else {
+          placeHolder["#deps"].forEach(($) => $.deepRemove());
+          placeHolder["#deps"] = [];
+        }
+      });
   } else {
     const props = {
       targetedRoutes: { paths, isExact },
+      get location() {
+        const LOC = new URL(document.location);
+        LOC.params = isActive.groups;
+        return LOC;
+      },
       Children: {
         "#isComponent": false,
         "#isChild": true,
@@ -87,49 +101,46 @@ function renderRoute(obj, children) {
     };
 
     let cachedEL = null;
-    if (isActive) {
-      props.location = new URL(document.location);
-      props.location.params = isActive.groups;
+    if (SwitchOn || isActive) {
       cachedEL = render(component.current, function () {
         return props;
       });
+
       placeHolder["#deps"] = [cachedEL];
     }
+
+    if (SwitchOn)
+      return {
+        get isActive() {
+          return checkMatchedStr(paths, isExact);
+        },
+        get current() {
+          return cachedEL;
+        },
+      };
 
     Listeners.add(function () {
       isActive = checkMatchedStr(paths, isExact);
       if (isActive) {
-        props.location = new URL(document.location);
-        props.location.params = isActive.groups;
-
         cachedEL === null &&
           (cachedEL = render(component.current, function () {
             return props;
           }));
-        placeHolder.before(cachedEL);
+        placeHolder.spreadBefore(cachedEL);
         placeHolder["#deps"] = [cachedEL];
       } else {
-        placeHolder["#deps"].forEach(($) => $.remove());
+        placeHolder["#deps"].forEach(($) => $.deepRemove());
         placeHolder["#deps"] = [];
       }
     });
   }
 
-  return SwitchOn
-    ? {
-        get isActive() {
-          return isActive;
-        },
-        get current() {
-          return placeHolder;
-        },
-      }
-    : placeHolder;
+  return placeHolder;
 }
 
 function renderSwitch($children) {
-  const fallback = new Text("");
-  let currentRoute = fallback;
+  const fallback = new Text();
+  let currentRoute = null;
 
   SwitchOn = true;
   const children = $children
@@ -137,14 +148,14 @@ function renderSwitch($children) {
     .filter(($) => !($ instanceof Node));
   SwitchOn = false;
 
-  let result = children.find((el) => el.isActive);
-  if (result) currentRoute = result.current;
+  const firstMatched = children.find((el) => el.isActive);
+  currentRoute = firstMatched ? firstMatched.current : fallback;
 
   Listeners.add(function () {
-    result = children.find((el) => el.isActive);
-    if (result) {
-      currentRoute.replace(result.current);
-      currentRoute = result.current;
+    const newRoute = children.find((el) => el.isActive);
+    if (newRoute) {
+      currentRoute.replace(newRoute.current);
+      currentRoute = newRoute.current;
       return;
     }
     currentRoute.replace(fallback);

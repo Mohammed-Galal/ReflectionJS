@@ -250,7 +250,7 @@ export function handleElement([tag, props, children]) {
       attrVal = props[$];
 
     if (attrName === "key") return;
-    else if (attrName === "class") return (attrName = "className");
+    else if (attrName === "class") attrName = "className";
     else if (typeof attrVal === "number") {
       if (/^on[A-Z]/.exec(attrName)) {
         attrName = attrName.toLowerCase().slice(2);
@@ -304,7 +304,7 @@ export function handleNode(node) {
 }
 
 function renderLoop(arrOfEls) {
-  const placeHolder = new Text("");
+  const placeHolder = new Text();
   placeHolder["#deps"] = arrOfEls.map(($) => handleComponent($).el);
 
   return {
@@ -321,7 +321,7 @@ function renderLoop(arrOfEls) {
       while (index < endPos) {
         const oldC = oldList[index],
           newC = newList[index];
-        if (oldC === undefined) placeHolder.before(newC);
+        if (oldC === undefined) placeHolder.spreadBefore(newC);
         else if (newC === undefined) oldC.deepRemove();
         else oldC.replace(newC);
         index++;
