@@ -45,8 +45,12 @@ export const Components = {
 export function render(fn, props, proxify) {
   if (typeof fn !== "function") {
     if (fn["#isComponent"] !== true) {
-      if (fn["#isChild"]) return fn.dom;
-      throw JSON.stringify(fn) + " must return JSX component";
+      if (fn["#isChild"]) {
+        const txt = new Text();
+        txt["#deps"] = fn.dom;
+        return txt;
+      }
+      return JSON.stringify(fn);
     }
 
     return handleComponent(fn).el;
@@ -102,8 +106,7 @@ export function render(fn, props, proxify) {
       const C = fn(props());
       Hooks.reset(false);
       Components.updating = false;
-      if (C["#isComponent"] !== true)
-        throw JSON.stringify(fn) + " must return JSX component";
+      if (C["#isComponent"] !== true) return JSON.stringify(fn);
       return C;
     };
 
@@ -271,7 +274,7 @@ export function handleElement([tag, props, children]) {
     el[attrName] = encodeHTML(attrVal);
   });
 
-  el.adopt(children);
+  children.forEach(($) => el.adopt($));
   if (elementHasKey) cachedDomByKeys.set(K, el);
   return el;
 }
