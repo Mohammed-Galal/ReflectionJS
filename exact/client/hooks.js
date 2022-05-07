@@ -1,5 +1,6 @@
 import { Components } from "./index.js";
 
+let crashed = false;
 export const Hooks = {
   useBatchOn: false,
   updateCurrentComponent: null,
@@ -7,37 +8,35 @@ export const Hooks = {
   context: null,
   reset(bool, $context, updater) {
     this.avail = bool;
-    if (!bool) {
-      this.context.useState.currentNode = 0;
-      this.context.useDomRef.currentNode = 0;
-      this.updateCurrentComponent = null;
-      return (this.context = null);
+    if (bool) {
+      this.updateCurrentComponent = updater;
+      this.context = $context;
+      return;
     }
-    this.updateCurrentComponent = updater;
-    this.context = $context;
+    ["useState", "useDomRef"].forEach(
+      ($) => (Hooks.context[$].currentNode = 0)
+    );
+    this.updateCurrentComponent = null;
+    this.context = null;
   },
 };
 
 export function useState(initState) {
-  throwErrors("Open", "useState");
-
   const targetedComponent = Hooks.context,
     update = Hooks.updateCurrentComponent,
     states = targetedComponent.useState.repo,
-    stateNode = targetedComponent.currentNode;
-
+    stateNode = targetedComponent.useState.currentNode;
   targetedComponent.useState.currentNode++;
 
-  if (Components.updating) {
-    if (stateNode > states.length)
-      throw "hooks cannot get invoked inside of loops or conditions";
-    initState = states[stateNode];
-  } else states[stateNode] = initState;
+  checkHooksRules("useState", stateNode);
+
+  if (Components.updating) initState = states[stateNode];
+  else states[stateNode] = initState;
 
   return [
     initState,
     function (newVal) {
-      if (newVal === initState) return false;
+      if (newVal === initState || crashed) return false;
       targetedComponent.useState.repo[stateNode] = newVal;
       if (!Hooks.useBatchOn) return update();
       targetedComponent.useBatch.add(update);
@@ -46,21 +45,20 @@ export function useState(initState) {
 }
 
 export function useDomRef() {
-  throwErrors("Open", "useDomRef");
-
   const targetedComponent = Components.currentContext.useDomRef,
-    refs = targetedComponent.refs,
-    refNode = targetedComponent.refNode;
-  targetedComponent.refNode++;
+    refs = targetedComponent.repo,
+    refNode = targetedComponent.currentNode;
+  targetedComponent.currentNode++;
+
+  checkHooksRules("useDomRef", refNode);
 
   if (!Components.updating) refs[refNode] = {};
 
+  if (crashed) return false;
   return refs[refNode];
 }
 
 export function useLayoutEffect(fn, deps) {
-  throwErrors("Open", "useEffect");
-
   const effects = Components.currentContext.useLayoutEffect;
 
   if (arguments.length === 1) {
@@ -171,8 +169,20 @@ export function useWithdraw(fn) {
   Components.currentContext.useWithdraw = fn;
 }
 
-function throwErrors(typeOfErr, methodName, cond) {
-  if (typeOfErr === "Open" && !Hooks.avail)
-    throw methodName + " function must get called inside of a function";
-  if (cond) throw methodName + " function can only get called once";
+function checkHooksRules(hookName, currentNode) {
+  if (
+    !Hooks.avail ||
+    (Components.updating && currentNode >= Hooks.context[hookName].repo.length)
+  ) {
+    crashed = true;
+    console.error(
+      `
+      there is an error eccured during setting the hooks,
+      please put the following rules in considiration when using hooks:-
+      
+      1- hooks must get called inside of functional components
+      2- hooks cannot get called inside if Loops or If Statements
+      `
+    );
+  }
 }

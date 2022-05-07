@@ -32,7 +32,10 @@ const listOfComponents = [
 function App(props) {
   const [txt, setTxt] = useState(true);
 
-  console.log(props);
+  if (!txt) {
+    useState("");
+  }
+
   return {
     "#isComponent": true,
     _id: 1,
@@ -78,7 +81,6 @@ render(() => {
             ["Route", { "exact:paths": "/" }, ["root Component"]],
           ],
         ],
-
         "deijodij",
       ],
     ],
