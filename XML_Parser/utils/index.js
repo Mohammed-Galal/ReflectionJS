@@ -48,7 +48,9 @@ function handleTextContent(text) {
     }
   }
 
-  const parsedRoots = roots.map(parser);
+  return contentWithoutRoots
+    .map(($) => (typeof $ === "number" ? parser(roots[$]) : $))
+    .join("");
 }
 
 const rootSplitExp = /(?=<\w)|(?=\/>)|(?=>)|(?=<\/\w)|(?={)|(?<=})/g;
@@ -129,6 +131,7 @@ function parser(root) {
           parent = DOMArray[DomLen - 2];
         parent[2].push(el);
         Contexts.active.pop();
+        DOMArray.length > 1 && DOMArray.pop();
       },
       appendText(txt) {
         const result = txt[0] === ">" ? String(txt).slice(1) : txt;
@@ -149,6 +152,6 @@ function parser(root) {
     _id: ${currentKey},
     scripts: [${scripts}],
     components: [${components}],
-    dom: ${DOMArray[0]}
+    dom: ${JSON.stringify(DOMArray[0])}
   }`;
 }
