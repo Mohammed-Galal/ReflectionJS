@@ -29,7 +29,7 @@ const listOfComponents = [
   },
 ];
 
-function App(props) {
+function App({ path, Children }) {
   const [txt, setTxt] = useState(true);
 
   if (!txt) {
@@ -40,8 +40,8 @@ function App(props) {
     "#isComponent": true,
     _id: 1,
     scripts: [txt, () => setTxt(!txt)],
-    components: [props.Children],
-    dom: ["h1", { onClick: 1 }, [0, " ", [0, {}, []]]],
+    components: [Children],
+    dom: ["h1", { onClick: 1, "exact:path": path }, [0, " ", [0, {}, []]]],
   };
 }
 
@@ -71,14 +71,14 @@ render(() => {
         1,
         [
           "Switch",
-          {},
+          {
+            // mode: ["in-out","out-in","all"]
+            // transitionStartClass: ""
+            // transitionEndClass: ""
+          },
           [
-            [
-              "Route",
-              { "exact:paths": "/:index.html", component: 0 },
-              ["im a Child "],
-            ],
-            ["Route", { "exact:paths": "/" }, ["root Component"]],
+            [0, { path: "/:index.html" }, ["im a Child "]],
+            ["div", { "exact:paths": "/" }, ["root Component"]],
           ],
         ],
         "deijodij",
