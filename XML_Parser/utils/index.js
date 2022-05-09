@@ -73,6 +73,10 @@ function parser(root) {
       addContext(Context) {
         this.active.push(Context);
       },
+      pop() {
+        this.active.pop();
+        DOMArray.length > 1 && DOMArray.pop();
+      },
     };
 
   let strHolder = [],
@@ -130,8 +134,7 @@ function parser(root) {
         const DomLen = DOMArray.length,
           parent = DOMArray[DomLen - 2];
         parent[2].push(el);
-        Contexts.active.pop();
-        DOMArray.length > 1 && DOMArray.pop();
+        Contexts.pop();
       },
       appendText(txt) {
         const result = txt[0] === ">" ? String(txt).slice(1) : txt;
