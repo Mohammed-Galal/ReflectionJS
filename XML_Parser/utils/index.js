@@ -64,20 +64,20 @@ function parser(root) {
     components = [];
   key++;
 
-  const DOMArray = [],
-    Contexts = {
-      active: [],
-      get current() {
-        return this.active[this.active.length - 1];
-      },
-      addContext(Context) {
-        this.active.push(Context);
-      },
-      pop() {
-        this.active.pop();
-        DOMArray.length > 1 && DOMArray.pop();
-      },
-    };
+  // const DOMArray = [],
+  const Contexts = {
+    active: [],
+    get current() {
+      return this.active[this.active.length - 1];
+    },
+    addContext(Context) {
+      this.active.push(Context);
+    },
+    pop() {
+      this.active.pop();
+      // DOMArray.length > 1 && DOMArray.pop();
+    },
+  };
 
   let strHolder = [],
     countOfOpenScript = 0;
@@ -123,22 +123,25 @@ function parser(root) {
   }
 
   function _createContext(str) {
-    const [tag, attrs] = handleOpenTags(str),
+    const parent = Contexts.current,
+      [tag, attrs] = handleOpenTags(str),
       children = [];
 
-    const el = [tag, attrs, children];
-    DOMArray.push(el);
-
     Contexts.add({
-      revoke() {
-        const DomLen = DOMArray.length,
-          parent = DOMArray[DomLen - 2];
-        parent[2].push(el);
-        Contexts.pop();
+      get el() {
+        return [tag, attrs, children];
+      },
+      appendEl(el) {
+        children.push(el);
       },
       appendText(txt) {
         const result = txt[0] === ">" ? String(txt).slice(1) : txt;
         children.push(result);
+      },
+      revoke() {
+        if (Contexts.active.length === 1) return;
+        parent.appendEl(this.el);
+        Contexts.pop();
       },
     });
   }
@@ -155,6 +158,6 @@ function parser(root) {
     _id: ${currentKey},
     scripts: [${scripts}],
     components: [${components}],
-    dom: ${JSON.stringify(DOMArray[0])}
+    dom: ${JSON.stringify(Contexts.active.el)}
   }`;
 }
