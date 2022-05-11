@@ -64,7 +64,6 @@ function parser(root) {
     components = [];
   key++;
 
-  // const DOMArray = [],
   const Contexts = {
     active: [],
     get current() {
@@ -75,7 +74,6 @@ function parser(root) {
     },
     pop() {
       this.active.pop();
-      // DOMArray.length > 1 && DOMArray.pop();
     },
   };
 
@@ -91,11 +89,12 @@ function parser(root) {
     currentIndex++;
 
     if (isOpenScript) countOfOpenScript++;
-    else if (isThereOpenScript && isEndScript) {
-      countOfOpenScript--;
+    else if (isThereOpenScript && isEndScript) countOfOpenScript--;
+
+    if (isThereOpenScript) {
+      strHolder.push(str);
 
       if (countOfOpenScript === 0) {
-        strHolder.push(str);
         const result = strHolder.join("").slice(1, -1),
           isScriptExist = scripts.indexOf(result);
 
@@ -105,12 +104,8 @@ function parser(root) {
           scripts[scriptIndex] = result;
           Contexts.current.appendText(scriptIndex);
         }
-        continue;
       }
-    }
 
-    if (isThereOpenScript) {
-      strHolder.push(str);
       continue;
     }
 
