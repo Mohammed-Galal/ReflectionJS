@@ -6,6 +6,7 @@ export const Hooks = {
   updateCurrentComponent: null,
   avail: false,
   context: null,
+  //
   reset(bool, $context, updater) {
     this.avail = bool;
     if (bool) {
@@ -13,22 +14,45 @@ export const Hooks = {
       this.context = $context;
       return;
     }
-    ["useState", "useDomRef"].forEach(
-      ($) => (Hooks.context[$].currentNode = 0)
-    );
+    ["useState"].forEach(($) => (Hooks.context[$].currentNode = 0));
     this.updateCurrentComponent = null;
     this.context = null;
   },
 };
 
-export function useState(initState) {
-  const targetedComponent = Hooks.context,
-    update = Hooks.updateCurrentComponent,
-    states = targetedComponent.useState.repo,
-    stateNode = targetedComponent.useState.currentNode;
-  targetedComponent.useState.currentNode++;
+function initHook(hookName) {
+  const update = Hooks.updateCurrentComponent,
+    targetHook = Hooks.context[hookName],
+    currentNode = targetHook.currentNode;
+  targetHook.currentNode++;
 
-  checkHooksRules("useState", stateNode);
+  if (
+    !Hooks.avail ||
+    (Components.updating && currentNode >= targetHook.repo.length)
+  ) {
+    crashed = true;
+    throw new Error(`
+      there is an error eccured during setting the hooks,
+      please put the following rules in considiration when using hooks:-
+      
+      1- hooks must get called inside of functional components
+      2- hooks cannot get called inside if Loops or If Statements
+      `);
+  }
+
+  return {
+    update,
+    targetHook: {
+      repo: targetHook.repo,
+      currentNode,
+    },
+  };
+}
+
+export function useState(initState) {
+  const { update, targetHook } = initHook("useState"),
+    states = targetHook.repo,
+    stateNode = targetHook.currentNode;
 
   if (Components.updating) initState = states[stateNode];
   else states[stateNode] = initState;
@@ -37,9 +61,9 @@ export function useState(initState) {
     initState,
     function (newVal) {
       if (newVal === initState || crashed) return false;
-      targetedComponent.useState.repo[stateNode] = newVal;
+      states[stateNode] = newVal;
       if (!Hooks.useBatchOn) return update();
-      targetedComponent.useBatch.add(update);
+      Hooks.context.useBatch.add(update);
     },
   ];
 }
@@ -169,20 +193,4 @@ export function useWithdraw(fn) {
   Components.currentContext.useWithdraw = fn;
 }
 
-function checkHooksRules(hookName, currentNode) {
-  if (
-    !Hooks.avail ||
-    (Components.updating && currentNode >= Hooks.context[hookName].repo.length)
-  ) {
-    crashed = true;
-    console.error(
-      `
-      there is an error eccured during setting the hooks,
-      please put the following rules in considiration when using hooks:-
-      
-      1- hooks must get called inside of functional components
-      2- hooks cannot get called inside if Loops or If Statements
-      `
-    );
-  }
-}
+function checkHooksRules(hookName, currentNode) {}

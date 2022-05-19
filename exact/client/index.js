@@ -71,10 +71,6 @@ export function render(fn, props, proxify) {
         repo: [],
         currentNode: 0,
       },
-      useDomRef: {
-        repo: [],
-        currentNode: 0,
-      },
       useLayoutEffect: {
         repo: [],
         currentNode: 0,
@@ -110,7 +106,16 @@ export function render(fn, props, proxify) {
       return C;
     };
 
-  let { _id, el, update, replace } = handleComponent(component(false));
+  let { _id, el, refs, update, replace } = handleComponent(component(false));
+
+  hooksContext.useEffect.repo.forEach(($) =>
+    $.run({
+      get root() {
+        return el;
+      },
+      refs,
+    })
+  );
 
   return el;
 
@@ -126,7 +131,9 @@ export function render(fn, props, proxify) {
 
 function handleComponent({ _id, scripts, components, dom }) {
   const cachedContexts = new Map(),
+    refs = {},
     context = {
+      refs: refs,
       scripts: scripts.map(scriptify),
       components: components,
     };
@@ -139,6 +146,7 @@ function handleComponent({ _id, scripts, components, dom }) {
   return {
     _id: _id,
     el: context.el,
+    refs: refs,
     update: update,
     replace: replace,
   };
@@ -252,16 +260,21 @@ export function handleElement([tag, props, children]) {
     var attrName = $,
       attrVal = props[$];
 
+    const valISDynamic = typeof attrVal === "number";
+
     if (attrName === "key") return;
     else if (attrName === "class") attrName = "className";
-    else if (typeof attrVal === "number") {
+    else if (attrName === "ref") {
+      const refs = Components.context.refs;
+      if (valISDynamic) return (refs[scripts[attrVal].current] = el);
+      return (refs[attrVal] = el);
+    } else if (valISDynamic) {
       if (/^on[A-Z]/.exec(attrName)) {
         attrName = attrName.toLowerCase().slice(2);
         return el.addEventListener(attrName, function () {
           scripts[attrVal].current.apply(el, arguments);
         });
-      } else if (attrName === "ref")
-        return (scripts[attrVal].current.current = el);
+      }
 
       function reseter() {
         el[attrName] = scripts[attrVal].current;

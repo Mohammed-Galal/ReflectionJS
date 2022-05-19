@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <a href="/index.html">index</a>
+
+    <script>
+      function parse(txt) {
+        txt = txt.replace(
+          /<>|<\/>/g,
+          (m) => (m === "<>" ? "<" : "</") + "Fragment>"
+        );
+
+        const fileArr = txt.split(/(?=<\/?\w|[{}])|(?<=<\/\S+>|\/>|[{}])/g),
+          endPos = fileArr.length;
+
+        const pureContent = [],
+          jsxRoots = [];
+
+        let rootHolder = {
+            scripts: [],
+            jsx: [],
+            addScript(S) {
+              const indexOfScript = this.scripts.push(S) - 1;
+              this.jsx.push("{" + indexOfScript + "}");
+              return indexOfScript;
+            },
+          },
+          jsxCounter = 0,
+          scriptsHolder = [],
+          scriptsCounter = 0;
+
+        var currentIndex = 0;
+        while (currentIndex < endPos) {
+          const str = fileArr[currentIndex];
+          currentIndex++;
+
+          const isOpenTag = /^<\w/.test(str),
+            isThereOpenScripts = scriptsCounter > 0;
+          !isThereOpenScripts && isOpenTag && jsxCounter++;
+
+          if (jsxCounter === 0) {
+            pureContent.push(str);
+            continue;
+          }
+
+          str === "{" && scriptsCounter++;
+          if (scriptsCounter > 0) {
+            scriptsHolder.push(str);
+            str === "}" && scriptsCounter--;
+            if (scriptsCounter === 0) {
+              rootHolder.addScript(scriptsHolder.join("").slice(1, -1));
+              scriptsHolder = [];
+            }
+            continue;
+          }
+
+          const jsxHolder = rootHolder.jsx;
+          jsxHolder.push(str);
+
+          /^<\/\w|\/>$/.test(str) && jsxCounter--;
+
+          if (jsxCounter === 0) {
+            const index =
+              jsxRoots.push({ jsxHolder, scripts: rootHolder.scripts }) - 1;
+            pureContent.push(index);
+            rootHolder.jsx = [];
+            rootHolder.scripts = [];
+          }
+        }
+
+        return pureContent
+          .map(($) => (typeof $ !== "number" ? $ : parser(jsxRoots[$])))
+          .join("");
+      }
+
+      let key = 0;
+      function parser({ jsxHolder, scripts }) {
+        const rootSplit = jsxHolder.join("").split(/(?=<\/?\S)|(?=\/>)|>/g),
+          endPos = rootSplit.length;
+
+        const Context = {
+          key,
+          scripts,
+          components: [],
+          active: [],
+          get current() {
+            return this.active[this.active.length - 1];
+          },
+
+          //
+          openNewEl(str) {
+            const splitted = str.slice(1).split(/\s+(?=\S+=["'{])/),
+              tag = splitted[0],
+              attrsTxts = splitted.slice(1).map(function ($) {
+                $ = $.trim();
+                const sepratorIndex = $.indexOf("="),
+                  attrName = $.substring(0, sepratorIndex),
+                  attrVal = $.substring(sepratorIndex + 1);
+
+                const arr = [
+                  attrName,
+                  /^{/.test(attrVal)
+                    ? Number(attrVal.slice(1, -1))
+                    : Function("return " + attrVal)(),
+                ];
+
+                return arr;
+              }),
+              attrs = Object.fromEntries(attrsTxts);
+
+            this.active.push([tag, attrs, []]);
+          },
+
+          append(str) {
+            const targetParent = this.current[2];
+
+            str
+              .split(/(?={)|(?<=})/g)
+              .forEach(($) =>
+                targetParent.push(/^{/.test($) ? Number($.slice(1, -1)) : $)
+              );
+          },
+
+          revoke() {
+            if (this.active.length === 1) return;
+            const parent = this.active[this.active.length - 2],
+              current = this.current;
+            parent[2].push(current);
+            this.active.pop();
+          },
+        };
+
+        key++;
+        var currentIndex = 0;
+        while (endPos > currentIndex) {
+          const str = rootSplit[currentIndex];
+          currentIndex++;
+          if (/^<\w/.test(str)) Context.openNewEl(str);
+          else if (/^(\/|<\/\w)/.test(str)) Context.revoke();
+          else Context.append(str);
+        }
+
+        return `{"#isComponent:true,_id:${key},scripts:[${Context.scripts.map(
+          parse
+        )}],components:[${Context.components}],dom: ${JSON.stringify(
+          Context.active
+        )}"}`;
+      }
+    </script>
+
+    <script>
+      console.time("parse");
+      const result = parse(`export default function () {
+      const [x, setX] = useState(1),
+      [y, setY] = useServerState("user");
+      return (
+      <>
+      <Switch>
+      <Route id="" paths={"/"} />
+      hello your Id is
+      {x.map(($) => {
+      return <Div>hello {x}</Div>;
+      })}
+      {isActive ? "" : <>ok</>}
+      </Switch>
+      </>
+      );
+      }`);
+      console.timeEnd("parse");
+
+      console.log(result);
+    </script>
+  </body>
+</html>
