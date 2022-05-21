@@ -96,7 +96,6 @@
           //
           openNewEl(str) {
             const splitted = str.slice(1).split(/\s+(?=\S+=["'{])/),
-              tag = splitted[0],
               attrsTxts = splitted.slice(1).map(function ($) {
                 $ = $.trim();
                 const sepratorIndex = $.indexOf("="),
@@ -114,17 +113,31 @@
               }),
               attrs = Object.fromEntries(attrsTxts);
 
-            this.active.push([tag, attrs, []]);
+            let tagPlaceHolder = splitted[0];
+            if (
+              !/switch|route|link|fragment/i.test(tagPlaceHolder) &&
+              /^[A-Z]|\./g.test(tagPlaceHolder)
+            ) {
+              const indexOfTarget = this.components.indexOf(tagPlaceHolder);
+              tagPlaceHolder =
+                indexOfTarget === -1
+                  ? this.components.push(tagPlaceHolder) - 1
+                  : indexOfTarget;
+            }
+
+            this.active.push([tagPlaceHolder, attrs, []]);
           },
 
           append(str) {
             const targetParent = this.current[2];
 
-            str
-              .split(/(?={)|(?<=})/g)
-              .forEach(($) =>
-                targetParent.push(/^{/.test($) ? Number($.slice(1, -1)) : $)
-              );
+            str.split(/(?={)|(?<=})/g).forEach(($) => {
+              let result = $;
+              if (/^{/.test($)) result = Number($.slice(1, -1));
+              else if ($.trim() === "") return;
+              else result = $.replace(/\s{2,}/g, " ");
+              targetParent.push(result);
+            });
           },
 
           revoke() {
