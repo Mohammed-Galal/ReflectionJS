@@ -22,7 +22,7 @@ export const checkMatchedStr = function ($str, isExact) {
     };
   },
   isCustomTag = function (tag) {
-    return /^(Switch|Route|Link|)$/.test(tag);
+    return /^(Switch|Route|Link|Fragment)$/.test(tag);
   },
   encodeHTML = function (node) {
     return String(node).replace(/&#60;|&#62;/, function (m) {

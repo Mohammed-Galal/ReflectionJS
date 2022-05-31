@@ -1,5 +1,5 @@
 import render from "./exact/client/index.js";
-import { useState } from "./exact/client/hooks.js";
+import { useBatch, useState } from "./exact/client/hooks.js";
 
 const listOfComponents = [
   {
@@ -32,10 +32,6 @@ const listOfComponents = [
 function App({ path, Children }) {
   const [txt, setTxt] = useState(true);
 
-  if (!txt) {
-    useState("");
-  }
-
   return {
     "#isComponent": true,
     _id: 1,
@@ -46,43 +42,25 @@ function App({ path, Children }) {
 }
 
 render(() => {
-  const [x, y] = useState(true);
+  const [x, y] = useState(true),
+    [a, b] = useState(1);
 
-  // setTimeout(() => {
-  //   listOfComponents.push({
-  //     "#isComponent": true,
-  //     _id: 3,
-  //     scripts: [],
-  //     components: [],
-  //     dom: ["Link", { href: "/about/dd", key: "Two" }, ["Two"]],
-  //   });
+  // const ev = function () {
   //   y(!x);
-  // }, 2000);
+  //   b(a + 1);
+  // };
+  const ev = useBatch(function () {
+    y(!x);
+    b(a + 1);
+  });
+
+  console.log(x, a);
 
   return {
     "#isComponent": true,
     _id: 0,
-    components: [],
-    scripts: [App, listOfComponents],
-    dom: [
-      "main",
-      {},
-      [
-        1,
-        [
-          "Switch",
-          {
-            // mode: ["in-out","out-in","all"]
-            // transitionStartClass: ""
-            // transitionEndClass: ""
-          },
-          [
-            [0, { path: "/:index.html" }, ["im a Child "]],
-            ["div", { "exact:paths": "/" }, ["root Component"]],
-          ],
-        ],
-        "deijodij",
-      ],
-    ],
+    components: [App],
+    scripts: [listOfComponents, ev],
+    dom: ["main", { onClick: 1 }, [0, [0, {}, ["im a Child "]], "deijodij"]],
   };
 }, "#root");

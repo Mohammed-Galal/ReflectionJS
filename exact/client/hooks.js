@@ -2,7 +2,7 @@ import { Components } from "./index.js";
 
 let crashed = false;
 export const Hooks = {
-  useBatchOn: false,
+  useBatch: { active: false, repo: new Set() },
   updateCurrentComponent: null,
   avail: false,
   context: null,
@@ -20,37 +20,10 @@ export const Hooks = {
   },
 };
 
-function initHook(hookName) {
-  const update = Hooks.updateCurrentComponent,
-    targetHook = Hooks.context[hookName],
-    currentNode = targetHook.currentNode;
-  targetHook.currentNode++;
-
-  if (
-    !Hooks.avail ||
-    (Components.updating && currentNode >= targetHook.repo.length)
-  ) {
-    crashed = true;
-    throw new Error(`
-      there is an error eccured during setting the hooks,
-      please put the following rules in considiration when using hooks:-
-      
-      1- hooks must get called inside of functional components
-      2- hooks cannot get called inside if Loops or If Statements
-      `);
-  }
-
-  return {
-    update,
-    targetHook: {
-      repo: targetHook.repo,
-      currentNode,
-    },
-  };
-}
-
 export function useState(initState) {
-  const { update, targetHook } = initHook("useState"),
+  const BatchInfo = Hooks.useBatch,
+    update = Hooks.updateCurrentComponent,
+    targetHook = initHook("useState"),
     states = targetHook.repo,
     stateNode = targetHook.currentNode;
 
@@ -62,49 +35,36 @@ export function useState(initState) {
     function (newVal) {
       if (newVal === initState || crashed) return false;
       states[stateNode] = newVal;
-      if (!Hooks.useBatchOn) return update();
-      Hooks.context.useBatch.add(update);
+      if (!BatchInfo.active) return update();
+      BatchInfo.repo.add(update);
+      return true;
     },
   ];
 }
 
-export function useDomRef() {
-  const targetedComponent = Components.currentContext.useDomRef,
-    refs = targetedComponent.repo,
-    refNode = targetedComponent.currentNode;
-  targetedComponent.currentNode++;
+export function useBatch(fn) {
+  const BatchInfo = Hooks.useBatch;
 
-  checkHooksRules("useDomRef", refNode);
-
-  if (!Components.updating) refs[refNode] = {};
-
-  if (crashed) return false;
-  return refs[refNode];
-}
-
-export function useLayoutEffect(fn, deps) {
-  const effects = Components.currentContext.useLayoutEffect;
-
-  if (arguments.length === 1) {
-    effects.needToReRun = true;
-    effects.fn = fn;
-    return;
+  if (!Hooks.avail) {
+    crashed = true;
+    throw new Error(`
+      there is an error eccured during setting the hooks,
+      please put the following rules in considiration when using hooks:-
+      
+      1- hooks must get called inside of functional components
+      2- hooks cannot get called inside if Loops or If Statements
+      `);
   }
 
-  if (effects.deps === null) {
-    effects.deps = deps;
-    effects.fn = fn;
-    return;
-  }
-
-  effects.needToReRun = effects.deps.some(function ($, ind) {
-    return $ !== deps[ind];
-  });
-
-  if (effects.needToReRun) {
-    effects.deps = deps;
-    effects.fn = fn;
-  }
+  return function () {
+    BatchInfo.active = true;
+    fn.apply(null, arguments);
+    BatchInfo.repo.forEach(function ($) {
+      $();
+    });
+    BatchInfo.active = false;
+    BatchInfo.repo.clear();
+  };
 }
 
 export function useEffect(fn, deps) {
@@ -132,22 +92,6 @@ export function useEffect(fn, deps) {
     effects.deps = deps;
     effects.fn = fn;
   }
-}
-
-export function useBatch(fn) {
-  throwErrors("Open", "useBatch");
-  // throwErrors("calledOnce", "useBatch", stateBar.calledOnce);
-
-  const targetedComponent = Components.currentContext;
-  return function () {
-    hooks.useBatchOn = true;
-    fn.apply(null, arguments);
-    targetedComponent.useBatch.forEach(function ($) {
-      $();
-    });
-    hooks.useBatchOn = false;
-    targetedComponent.useBatch.clear();
-  };
 }
 
 // !================================
@@ -192,5 +136,67 @@ export function useWithdraw(fn) {
   if (typeof fn !== "function") throw "useWithdra ARGUMENT must be a funcion";
   Components.currentContext.useWithdraw = fn;
 }
+//
+function initHook(hookName) {
+  const targetHook = Hooks.context[hookName],
+    currentNode = targetHook.currentNode;
+  targetHook.currentNode++;
 
-function checkHooksRules(hookName, currentNode) {}
+  if (
+    !Hooks.avail ||
+    (Components.updating && currentNode >= targetHook.repo.length)
+  ) {
+    crashed = true;
+    throw new Error(`
+      there is an error eccured during setting the hooks,
+      please put the following rules in considiration when using hooks:-
+      
+      1- hooks must get called inside of functional components
+      2- hooks cannot get called inside if Loops or If Statements
+      `);
+  }
+
+  return {
+    repo: targetHook.repo,
+    currentNode,
+  };
+}
+//
+// export function useDomRef() {
+//   const targetedComponent = Components.currentContext.useDomRef,
+//     refs = targetedComponent.repo,
+//     refNode = targetedComponent.currentNode;
+//   targetedComponent.currentNode++;
+
+//   checkHooksRules("useDomRef", refNode);
+
+//   if (!Components.updating) refs[refNode] = {};
+
+//   if (crashed) return false;
+//   return refs[refNode];
+// }
+
+// export function useLayoutEffect(fn, deps) {
+//   const effects = Components.currentContext.useLayoutEffect;
+
+//   if (arguments.length === 1) {
+//     effects.needToReRun = true;
+//     effects.fn = fn;
+//     return;
+//   }
+
+//   if (effects.deps === null) {
+//     effects.deps = deps;
+//     effects.fn = fn;
+//     return;
+//   }
+
+//   effects.needToReRun = effects.deps.some(function ($, ind) {
+//     return $ !== deps[ind];
+//   });
+
+//   if (effects.needToReRun) {
+//     effects.deps = deps;
+//     effects.fn = fn;
+//   }
+// }
