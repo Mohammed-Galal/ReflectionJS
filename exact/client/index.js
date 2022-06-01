@@ -65,23 +65,14 @@ export function render(fn, props, proxify) {
     };
 
   const hooksContext = {
-      useBatch: new Set(),
-      // useWithdraw: null,
+      useBatch: { active: false, repo: new Set() },
       useState: {
         repo: [],
         currentNode: 0,
       },
-      useLayoutEffect: {
-        repo: [],
-        currentNode: 0,
-
-        // needToReRun: true,
-        // run: function run() {
-        //   this.needToReRun && this.fn !== null && this.fn();
-        //   this.needToReRun = false;
-        // },
-        // fn: null,
-        // deps: null,
+      useRefs: {
+        calledOnce: false,
+        repo: {},
       },
       useEffect: {
         repo: [],
@@ -108,14 +99,9 @@ export function render(fn, props, proxify) {
 
   let { _id, el, refs, update, replace } = handleComponent(component(false));
 
-  hooksContext.useEffect.repo.forEach(($) =>
-    $.run({
-      get root() {
-        return el;
-      },
-      refs,
-    })
-  );
+  hooksContext.useRefs.repo = refs;
+
+  hooksContext.useEffect.repo.forEach(($) => $.run());
 
   return el;
 
@@ -195,21 +181,20 @@ function handleComponent({ _id, scripts, components, dom }) {
 
 const cachedDomByKeys = new Map();
 export function handleElement([tag, props, children]) {
-  const propsKeys = Object.keys(props),
-    elementHasKey = propsKeys.some((p) => p === "key");
-
-  let K;
-  if (elementHasKey) {
+  const elementHasKey = "key" in props,
     K =
       typeof props["key"] === "number"
         ? scripts[props.keys].current
         : props["key"];
 
+  if (elementHasKey) {
     const getCached = cachedDomByKeys.get(K);
     if (getCached !== undefined) return getCached;
   }
 
-  const scripts = Components.context.scripts,
+  const propsKeys = Object.keys(props),
+    // elementHasKey = propsKeys.some((p) => p === "key");
+    scripts = Components.context.scripts,
     components = Components.context.components;
 
   if (isCustomTag(tag)) {

@@ -2,7 +2,6 @@ import { Components } from "./index.js";
 
 let crashed = false;
 export const Hooks = {
-  useBatch: { active: false, repo: new Set() },
   updateCurrentComponent: null,
   avail: false,
   context: null,
@@ -21,7 +20,7 @@ export const Hooks = {
 };
 
 export function useState(initState) {
-  const BatchInfo = Hooks.useBatch,
+  const BatchInfo = Hooks.context.useBatch,
     update = Hooks.updateCurrentComponent,
     targetHook = initHook("useState"),
     states = targetHook.repo,
@@ -43,7 +42,7 @@ export function useState(initState) {
 }
 
 export function useBatch(fn) {
-  const BatchInfo = Hooks.useBatch;
+  const BatchInfo = Hooks.context.useBatch;
 
   if (!Hooks.avail) {
     crashed = true;
@@ -65,6 +64,16 @@ export function useBatch(fn) {
     BatchInfo.active = false;
     BatchInfo.repo.clear();
   };
+}
+
+export function useRefs() {
+  const Info = Hooks.context.useRefs;
+  if (Info.calledOnce === true) {
+    crashed = true;
+    throw new Error(`useRefs hook must get invoked only once`);
+  }
+  Info.calledOnce = true;
+  return Info.repo;
 }
 
 export function useEffect(fn, deps) {
