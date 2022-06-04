@@ -66,6 +66,13 @@ export function useBatch(fn) {
   };
 }
 
+// export function createContext(fn) {
+//   if (Hooks.avail) {
+//     crashed = true;
+//     throw "createContext function must get called outside of components";
+//   }
+// }
+
 export function useRefs() {
   const Info = Hooks.context.useRefs;
   if (Info.calledOnce === true) {
@@ -105,9 +112,6 @@ export function useEffect(fn, deps) {
 
 // !================================
 export function createContext(fn) {
-  if (hooks.avail)
-    throw "createContext function must get called outside of components";
-
   fn = typeof fn !== "function" ? fn : fn(demoServerState);
 
   const deps = new Set();

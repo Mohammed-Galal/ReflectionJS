@@ -7,7 +7,6 @@ const Listeners = new Set(),
   };
 
 window.addEventListener("popstate", updateRoutes);
-// console.log(history.scrollRestoration);
 
 export default function handleCustomElements(tag, props, children) {
   switch (tag) {

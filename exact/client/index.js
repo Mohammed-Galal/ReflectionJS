@@ -1,4 +1,4 @@
-import "./bootstrap.js";
+import $ from "./nodeMethods.js";
 import { Hooks } from "./hooks.js";
 import handleCustomElements from "./router.js";
 import { scriptify, encodeHTML, isCustomTag } from "./utils.js";
@@ -24,7 +24,7 @@ function _typeof(obj) {
 }
 
 export default function (root, el) {
-  return document.querySelector(el).adopt(render(root));
+  return $(document.querySelector(el)).append(render(root));
 }
 
 export const Components = {
@@ -100,7 +100,6 @@ export function render(fn, props, proxify) {
   let { _id, el, refs, update, replace } = handleComponent(component(false));
 
   hooksContext.useRefs.repo = refs;
-
   hooksContext.useEffect.repo.forEach(($) => $.run());
 
   return el;
@@ -159,7 +158,7 @@ function handleComponent({ _id, scripts, components, dom }) {
     if (getCached !== undefined) {
       context.scripts = getCached.scripts;
       context.components = getCached.components;
-      context.el.replaceWith(getCached.el);
+      $(context.el).replaceWith(getCached.el);
       context.el = getCached.el;
     } else {
       context.scripts = newObj.scripts.map(scriptify);
@@ -169,7 +168,7 @@ function handleComponent({ _id, scripts, components, dom }) {
       const el = handleElement(newObj.dom);
       Components.popContext();
       //
-      context.el.replaceWith(el);
+      $(context.el).replaceWith(el);
       context.el = el;
       cachedContexts.set(String(newObj._id), context);
     }
@@ -272,7 +271,7 @@ export function handleElement([tag, props, children]) {
     el[attrName] = encodeHTML(attrVal);
   });
 
-  children.forEach(($) => el.adopt($));
+  children.forEach((innerNode) => $(el).append(innerNode));
   if (elementHasKey) cachedDomByKeys.set(K, el);
   return el;
 }
@@ -311,24 +310,8 @@ function renderLoop(arrOfEls) {
   return {
     dom: placeHolder,
     update: function () {
-      const oldList = placeHolder["#deps"],
-        newList = arrOfEls.map((C) => handleComponent(C).el);
-
-      const oldLen = oldList.length,
-        newLen = newList.length,
-        endPos = oldLen > newLen ? oldLen : newLen;
-
-      let index = 0;
-      while (index < endPos) {
-        const oldC = oldList[index],
-          newC = newList[index];
-        if (oldC === undefined) placeHolder.spreadBefore(newC);
-        else if (newC === undefined) oldC.deepRemove();
-        else oldC.replace(newC);
-        index++;
-      }
-
-      placeHolder["#deps"] = newList;
+      const newList = arrOfEls.map((C) => handleComponent(C).el);
+      $(placeHolder).replaceDeps(newList);
     },
   };
 }
