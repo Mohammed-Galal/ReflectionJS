@@ -1,5 +1,5 @@
 import render from "./exact/client/index.js";
-import { useBatch, useState } from "./exact/client/hooks.js";
+import { createContext, useBatch, useState } from "./exact/client/hooks.js";
 
 const listOfComponents = [
   {
@@ -41,8 +41,15 @@ function App({ path, Children }) {
   };
 }
 
+const context = createContext(function (srv) {
+  return {
+    id: 1,
+  };
+});
+
 render(() => {
-  const [x, y] = useState(true),
+  const [id, setContext] = context(),
+    [x, y] = useState(true),
     [a, b] = useState(1);
 
   // const ev = function () {
@@ -50,11 +57,12 @@ render(() => {
   //   b(a + 1);
   // };
   const ev = useBatch(function () {
-    y(!x);
-    b(a + 1);
+    // y(!x);
+    // b(a + 1);
+    setContext((srv) => ({ id: 2 }));
   });
 
-  console.log(x, a);
+  console.log(x, a, id);
 
   return {
     "#isComponent": true,

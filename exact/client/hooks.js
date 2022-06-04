@@ -66,12 +66,46 @@ export function useBatch(fn) {
   };
 }
 
-// export function createContext(fn) {
-//   if (Hooks.avail) {
-//     crashed = true;
-//     throw "createContext function must get called outside of components";
-//   }
-// }
+export function createContext(fn) {
+  // fn = typeof fn !== "function" ? fn : fn(demoServerState);
+  fn = typeof fn !== "function" ? fn : fn();
+  const deps = new Set();
+
+  return function () {
+    if (!Hooks.avail) {
+      crashed = true;
+      throw new Error(
+        `createContext Hook must only get invoked outside of a function`
+      );
+    }
+
+    const update = Hooks.updateCurrentComponent,
+      BatchInfo = Hooks.context.useBatch;
+    deps.add(update);
+
+    return [
+      fn,
+      function (setterFN) {
+        if (typeof setterFN !== "function")
+          throw "createContext setter must be function";
+
+        fn = setterFN(fn);
+
+        const arr = Array.from(deps);
+        deps.clear();
+
+        if (!BatchInfo.active)
+          return arr.forEach(function ($) {
+            $();
+          });
+
+        arr.forEach(function ($) {
+          BatchInfo.repo.add($);
+        });
+      },
+    ];
+  };
+}
 
 export function useRefs() {
   const Info = Hooks.context.useRefs;
@@ -111,38 +145,6 @@ export function useEffect(fn, deps) {
 }
 
 // !================================
-export function createContext(fn) {
-  fn = typeof fn !== "function" ? fn : fn(demoServerState);
-
-  const deps = new Set();
-
-  return function () {
-    throwErrors("Open", "createContext setter function");
-
-    const targetedComponent = Components.currentContext;
-    deps.add(targetedComponent.proxyFN);
-
-    return [
-      fn,
-      function (setterFN) {
-        if (typeof setterFN !== "function")
-          throw "createContext setter must be function";
-
-        fn = setterFN(fn);
-
-        if (!hooks.useBatchOn)
-          return deps.forEach(function ($) {
-            $();
-          });
-
-        deps.forEach(function ($) {
-          targetedComponent.useBatch.add($);
-        });
-        deps.clear();
-      },
-    ];
-  };
-}
 
 export function useWithdraw(fn) {
   throwErrors("Open", "useWithdraw");
