@@ -77,14 +77,6 @@ export function render(fn, props, proxify) {
       useEffect: {
         repo: [],
         currentNode: 0,
-
-        // needToReRun: true,
-        // run: function run(dom) {
-        //   this.needToReRun && this.fn !== null && this.fn(dom);
-        //   this.needToReRun = false;
-        // },
-        // fn: null,
-        // deps: null,
       },
     },
     component = function (isUpdating) {
@@ -107,6 +99,8 @@ export function render(fn, props, proxify) {
     const result = component(true);
     if (_id === result._id) update(result.scripts);
     else _id = replace(result);
+
+    hooksContext.useEffect.repo.forEach(($) => $.run());
 
     Components.needToreRender.forEach(($) => $());
     Components.needToreRender.clear();

@@ -2,6 +2,7 @@ import render from "./exact/client/index.js";
 import {
   createContext,
   useBatch,
+  useEffect,
   useRef,
   useState,
 } from "./exact/client/hooks.js";
@@ -69,6 +70,13 @@ render(() => {
   });
 
   console.log(x, a, collectionOfRefs);
+
+  useEffect(
+    function () {
+      console.log("useEffect!");
+    },
+    [x]
+  );
 
   return {
     "#isComponent": true,

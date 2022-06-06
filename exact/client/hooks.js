@@ -13,7 +13,9 @@ export const Hooks = {
       this.context = $context;
       return;
     }
-    ["useState", "useRef"].forEach(($) => (Hooks.context[$].currentNode = 0));
+    ["useState", "useEffect", "useRef"].forEach(
+      ($) => (Hooks.context[$].currentNode = 0)
+    );
     this.updateCurrentComponent = null;
     this.context = null;
   },
@@ -77,6 +79,32 @@ export function useRef() {
   return states[stateNode];
 }
 
+export function useEffect(fn, deps) {
+  const targetHook = initHook("useEffect"),
+    states = targetHook.repo,
+    stateNode = targetHook.currentNode;
+
+  if (Components.updating) {
+    const targetInfo = states[stateNode],
+      oldDeps = targetInfo.deps;
+
+    targetInfo.deps = deps;
+    targetInfo.fn = fn;
+
+    if (oldDeps === undefined || oldDeps.some(($, ind) => $ !== deps[ind]))
+      targetInfo.needToreRun = true;
+  } else
+    states[stateNode] = {
+      needToreRun: true,
+      deps: deps,
+      fn: fn,
+      run() {
+        if (this.needToreRun) this.fn.call(null);
+        this.needToreRun = false;
+      },
+    };
+}
+
 export function createContext(fn) {
   // fn = typeof fn !== "function" ? fn : fn(demoServerState);
   fn = typeof fn !== "function" ? fn : fn();
@@ -116,33 +144,6 @@ export function createContext(fn) {
       },
     ];
   };
-}
-
-export function useEffect(fn, deps) {
-  throwErrors("Open", "useEffect");
-
-  const effects = Components.currentContext.useEffect;
-
-  if (arguments.length === 1) {
-    effects.needToReRun = true;
-    effects.fn = fn;
-    return;
-  }
-
-  if (effects.deps === null) {
-    effects.deps = deps;
-    effects.fn = fn;
-    return;
-  }
-
-  effects.needToReRun = effects.deps.some(function ($, ind) {
-    return $ !== deps[ind];
-  });
-
-  if (effects.needToReRun) {
-    effects.deps = deps;
-    effects.fn = fn;
-  }
 }
 
 // !================================
