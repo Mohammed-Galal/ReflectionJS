@@ -1,5 +1,10 @@
 import render from "./exact/client/index.js";
-import { createContext, useBatch, useState } from "./exact/client/hooks.js";
+import {
+  createContext,
+  useBatch,
+  useRef,
+  useState,
+} from "./exact/client/hooks.js";
 
 const listOfComponents = [
   {
@@ -48,7 +53,8 @@ const context = createContext(function (srv) {
 });
 
 render(() => {
-  const [id, setContext] = context(),
+  const collectionOfRefs = useRef(),
+    // [id, setContext] = context(),
     [x, y] = useState(true),
     [a, b] = useState(1);
 
@@ -57,18 +63,22 @@ render(() => {
   //   b(a + 1);
   // };
   const ev = useBatch(function () {
-    // y(!x);
-    // b(a + 1);
-    setContext((srv) => ({ id: 2 }));
+    y(!x);
+    b(a + 1);
+    // setContext((srv) => ({ id: 2 }));
   });
 
-  console.log(x, a, id);
+  console.log(x, a, collectionOfRefs);
 
   return {
     "#isComponent": true,
     _id: 0,
     components: [App],
-    scripts: [listOfComponents, ev],
-    dom: ["main", { onClick: 1 }, [0, [0, {}, ["im a Child "]], "deijodij"]],
+    scripts: [listOfComponents, ev, (el) => (collectionOfRefs["main"] = el)],
+    dom: [
+      "main",
+      { onClick: 1, ref: 2 },
+      [0, [0, {}, ["im a Child "]], "deijodij"],
+    ],
   };
 }, "#root");

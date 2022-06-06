@@ -13,7 +13,7 @@ export const Hooks = {
       this.context = $context;
       return;
     }
-    ["useState"].forEach(($) => (Hooks.context[$].currentNode = 0));
+    ["useState", "useRef"].forEach(($) => (Hooks.context[$].currentNode = 0));
     this.updateCurrentComponent = null;
     this.context = null;
   },
@@ -71,7 +71,7 @@ export function useRef() {
     states = targetHook.repo,
     stateNode = targetHook.currentNode;
 
-  if (Components.updating) initState = states[stateNode];
+  if (Components.updating) return states[stateNode];
   else states[stateNode] = {};
 
   return states[stateNode];
@@ -164,7 +164,7 @@ function initHook(hookName) {
   ) {
     crashed = true;
     throw new Error(`
-      there is an error eccured during setting the hooks,
+      there is an error occured during setting the hooks,
       please put the following rules in considiration when using hooks:-
       
       1- hooks must get called inside of functional components
