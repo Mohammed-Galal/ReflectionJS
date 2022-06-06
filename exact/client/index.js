@@ -70,9 +70,9 @@ export function render(fn, props, proxify) {
         repo: [],
         currentNode: 0,
       },
-      useRefs: {
-        calledOnce: false,
-        repo: {},
+      useRef: {
+        currentNode: 0,
+        repo: [],
       },
       useEffect: {
         repo: [],
@@ -97,9 +97,8 @@ export function render(fn, props, proxify) {
       return C;
     };
 
-  let { _id, el, refs, update, replace } = handleComponent(component(false));
+  let { _id, el, update, replace } = handleComponent(component(false));
 
-  hooksContext.useRefs.repo = refs;
   hooksContext.useEffect.repo.forEach(($) => $.run());
 
   return el;
@@ -116,9 +115,7 @@ export function render(fn, props, proxify) {
 
 function handleComponent({ _id, scripts, components, dom }) {
   const cachedContexts = new Map(),
-    refs = {},
     context = {
-      refs: refs,
       scripts: scripts.map(scriptify),
       components: components,
     };
@@ -131,7 +128,6 @@ function handleComponent({ _id, scripts, components, dom }) {
   return {
     _id: _id,
     el: context.el,
-    refs: refs,
     update: update,
     replace: replace,
   };
@@ -249,9 +245,9 @@ export function handleElement([tag, props, children]) {
     if (attrName === "key") return;
     else if (attrName === "class") attrName = "className";
     else if (attrName === "ref") {
-      const refs = Components.context.refs;
-      if (valISDynamic) return (refs[scripts[attrVal].current] = el);
-      return (refs[attrVal] = el);
+      if (!valISDynamic)
+        throw new Error(`the ref attribute value must be dynamic`);
+      return scripts[attrVal].current(el);
     } else if (valISDynamic) {
       if (/^on[A-Z]/.exec(attrName)) {
         attrName = attrName.toLowerCase().slice(2);

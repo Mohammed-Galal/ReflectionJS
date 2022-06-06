@@ -66,6 +66,17 @@ export function useBatch(fn) {
   };
 }
 
+export function useRef() {
+  const targetHook = initHook("useRef"),
+    states = targetHook.repo,
+    stateNode = targetHook.currentNode;
+
+  if (Components.updating) initState = states[stateNode];
+  else states[stateNode] = {};
+
+  return states[stateNode];
+}
+
 export function createContext(fn) {
   // fn = typeof fn !== "function" ? fn : fn(demoServerState);
   fn = typeof fn !== "function" ? fn : fn();
@@ -105,16 +116,6 @@ export function createContext(fn) {
       },
     ];
   };
-}
-
-export function useRefs() {
-  const Info = Hooks.context.useRefs;
-  if (Info.calledOnce === true) {
-    crashed = true;
-    throw new Error(`useRefs hook must get invoked only once`);
-  }
-  Info.calledOnce = true;
-  return Info.repo;
 }
 
 export function useEffect(fn, deps) {
