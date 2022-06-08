@@ -35,6 +35,12 @@ const listOfComponents = [
   },
 ];
 
+const context = createContext(function (srv) {
+  return {
+    id: 1,
+  };
+});
+
 function App({ path, Children }) {
   const [txt, setTxt] = useState(true);
 
@@ -47,15 +53,10 @@ function App({ path, Children }) {
   };
 }
 
-const context = createContext(function (srv) {
-  return {
-    id: 1,
-  };
-});
-
 render(() => {
+  const { subscribe, getState, setState } = context();
+
   const collectionOfRefs = useRef(),
-    // [id, setContext] = context(),
     [x, y] = useState(true),
     [a, b] = useState(1);
 
@@ -64,12 +65,14 @@ render(() => {
   //   b(a + 1);
   // };
   const ev = useBatch(function () {
-    y(!x);
-    b(a + 1);
-    // setContext((srv) => ({ id: 2 }));
+    // y(!x);
+    // b(a + 1);
+    setState(({ id }) => {
+      return { id: id + 1 };
+    });
   });
 
-  console.log(x, a, collectionOfRefs);
+  console.log(getState);
 
   useEffect(
     function () {

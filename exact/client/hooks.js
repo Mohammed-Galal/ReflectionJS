@@ -88,11 +88,11 @@ export function useEffect(fn, deps) {
     const targetInfo = states[stateNode],
       oldDeps = targetInfo.deps;
 
-    targetInfo.deps = deps;
-    targetInfo.fn = fn;
-
-    if (oldDeps === undefined || oldDeps.some(($, ind) => $ !== deps[ind]))
+    if (oldDeps === undefined || oldDeps.some(($, ind) => $ !== deps[ind])) {
+      targetInfo.deps = deps;
+      targetInfo.fn = fn;
       targetInfo.needToreRun = true;
+    }
   } else
     states[stateNode] = {
       needToreRun: true,
@@ -106,9 +106,10 @@ export function useEffect(fn, deps) {
 }
 
 export function createContext(fn) {
-  // fn = typeof fn !== "function" ? fn : fn(demoServerState);
   fn = typeof fn !== "function" ? fn : fn();
-  const deps = new Set();
+
+  const middlewares = [],
+    deps = new Set();
 
   return function () {
     if (!Hooks.avail) {
@@ -120,15 +121,23 @@ export function createContext(fn) {
 
     const update = Hooks.updateCurrentComponent,
       BatchInfo = Hooks.context.useBatch;
-    deps.add(update);
 
-    return [
-      fn,
-      function (setterFN) {
-        if (typeof setterFN !== "function")
-          throw "createContext setter must be function";
-
-        fn = setterFN(fn);
+    return {
+      get getState() {
+        deps.add(update);
+        return fn;
+      },
+      subscribe(fn) {
+        if (typeof fn !== "function") {
+          crashed = true;
+          throw new Error(`the subscribe argument must be a function`);
+        }
+        if (Components.updating) return;
+        middlewares.push(fn);
+      },
+      setState(setterFN) {
+        fn = typeof setterFN !== "function" ? setterFN : setterFN(fn);
+        middlewares.forEach(($) => $(fn));
 
         const arr = Array.from(deps);
         deps.clear();
@@ -142,18 +151,11 @@ export function createContext(fn) {
           BatchInfo.repo.add($);
         });
       },
-    ];
+    };
   };
 }
 
 // !================================
-
-export function useWithdraw(fn) {
-  throwErrors("Open", "useWithdraw");
-  if (typeof fn !== "function") throw "useWithdra ARGUMENT must be a funcion";
-  Components.currentContext.useWithdraw = fn;
-}
-//
 function initHook(hookName) {
   const targetHook = Hooks.context[hookName],
     currentNode = targetHook.currentNode;
@@ -178,42 +180,3 @@ function initHook(hookName) {
     currentNode,
   };
 }
-//
-// export function useDomRef() {
-//   const targetedComponent = Components.currentContext.useDomRef,
-//     refs = targetedComponent.repo,
-//     refNode = targetedComponent.currentNode;
-//   targetedComponent.currentNode++;
-
-//   checkHooksRules("useDomRef", refNode);
-
-//   if (!Components.updating) refs[refNode] = {};
-
-//   if (crashed) return false;
-//   return refs[refNode];
-// }
-
-// export function useLayoutEffect(fn, deps) {
-//   const effects = Components.currentContext.useLayoutEffect;
-
-//   if (arguments.length === 1) {
-//     effects.needToReRun = true;
-//     effects.fn = fn;
-//     return;
-//   }
-
-//   if (effects.deps === null) {
-//     effects.deps = deps;
-//     effects.fn = fn;
-//     return;
-//   }
-
-//   effects.needToReRun = effects.deps.some(function ($, ind) {
-//     return $ !== deps[ind];
-//   });
-
-//   if (effects.needToReRun) {
-//     effects.deps = deps;
-//     effects.fn = fn;
-//   }
-// }
