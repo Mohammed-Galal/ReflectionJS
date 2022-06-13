@@ -1,10 +1,15 @@
+const premitiveVals = ["string", "number", "boolean"];
+
 function replacer(str) {
   return String(str).replace(
     /:(?<param>\w+)/g,
     (m) => "(?<" + m.slice(1) + ">\\w+)"
   );
 }
-export const checkMatchedStr = function ($str, isExact) {
+export const isPremitive = function (val) {
+    return premitiveVals.some(($) => typeof val === $);
+  },
+  checkMatchedStr = function ($str, isExact) {
     if ($str === undefined) return true;
 
     const isArray = $str instanceof Array,

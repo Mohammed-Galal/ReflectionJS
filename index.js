@@ -41,15 +41,26 @@ const context = createContext(function (srv) {
   };
 });
 
+const componentTest = {
+  "#isComponent": true,
+  scripts: [],
+  components: [],
+  dom: ["i", { key: "unique" }, ["some test component as italic"]],
+};
+
 function App({ path, Children }) {
   const [txt, setTxt] = useState(true);
 
   return {
     "#isComponent": true,
     _id: 1,
-    scripts: [txt, () => setTxt(!txt)],
+    scripts: [txt, () => setTxt(!txt), txt && componentTest],
     components: [Children],
-    dom: ["h1", { onClick: 1, "exact:path": path }, [0, " ", [0, {}, []]]],
+    dom: [
+      "h1",
+      { onClick: 1, "exact:path": path },
+      [0, " ", 2, " ", [0, {}, []]],
+    ],
   };
 }
 

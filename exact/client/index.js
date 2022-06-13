@@ -1,7 +1,7 @@
 import $ from "./nodeMethods.js";
 import { Hooks } from "./hooks.js";
 import handleCustomElements from "./router.js";
-import { scriptify, encodeHTML, isCustomTag } from "./utils.js";
+import { isPremitive, scriptify, encodeHTML, isCustomTag } from "./utils.js";
 
 function _typeof(obj) {
   "@babel/helpers - typeof";
@@ -274,10 +274,25 @@ export function handleNode(node) {
     const scripts = Components.context.scripts,
       script = scripts[node];
 
-    if (script.current instanceof Array) {
-      const result = renderLoop(script.current);
-      script.deps.push(result.update);
-      return result.dom;
+    const initialVal = script.current;
+    if (!isPremitive(initialVal)) {
+      if (initialVal instanceof Array) {
+        const result = renderLoop(initialVal);
+        script.deps.push(result.update);
+        return result.dom;
+      }
+
+      let component = render(initialVal),
+        placeHolder = new Text();
+      script.deps.push(function () {
+        const newComponentMap = !Boolean(script.current)
+          ? placeHolder
+          : render(script.current);
+
+        $(component).replaceWith(newComponentMap);
+        component = newComponentMap;
+      });
+      return component;
     }
 
     const TXT = new Text("");

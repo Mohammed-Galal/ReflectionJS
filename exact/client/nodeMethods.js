@@ -44,7 +44,7 @@ export default function $(el) {
           newC = newList[index];
         index++;
 
-        if (oldC === undefined) $(el).before(newC);
+        if (oldC === undefined) this.before(newC);
         else if (newC === undefined) $(oldC).remove();
         else $(oldC).replaceWith(newC);
       }
